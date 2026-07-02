@@ -1,0 +1,6 @@
+{
+  "name": "CareBridge",
+  "description": "Care That Keeps You Connected - A premium healthcare SaaS platform for AI-powered appointment booking, doctor collaboration, follow-up care, medication reminders, and secure healthcare management.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

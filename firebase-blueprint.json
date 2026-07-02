@@ -1,0 +1,75 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "App user (patient, doctor, or admin)",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email address of the user" },
+        "password": { "type": "string", "description": "Hashed or plain password" },
+        "role": { "type": "string", "enum": ["patient", "doctor", "admin"], "description": "User role" },
+        "name": { "type": "string", "description": "Full name" },
+        "phone": { "type": "string", "description": "Phone number" },
+        "verified": { "type": "boolean", "description": "Whether the user's email is verified" },
+        "bloodGroup": { "type": "string", "description": "Patient's blood group" },
+        "insurance": { "type": "string", "description": "Patient's insurance provider" },
+        "emergencyContact": { "type": "string", "description": "Patient's emergency contact" },
+        "googleAccessToken": { "type": "string", "description": "Google OAuth token" },
+        "googleRefreshToken": { "type": "string", "description": "Google OAuth refresh token" },
+        "specialty": { "type": "string", "description": "Doctor's specialty" },
+        "scheduleHours": { "type": "string", "description": "Doctor's schedules" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["email", "password", "role", "name"]
+    },
+    "OTP": {
+      "title": "OTP",
+      "description": "One-Time Password for verification",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "description": "Email address" },
+        "otp": { "type": "string", "description": "6-digit passcode" },
+        "type": { "type": "string", "enum": ["register", "forgot"], "description": "OTP context" },
+        "expiresAt": { "type": "string", "format": "date-time", "description": "Expiration timestamp" }
+      },
+      "required": ["email", "otp", "type", "expiresAt"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Medical appointment booking record",
+      "type": "object",
+      "properties": {
+        "patientId": { "type": "string", "description": "User ID of the patient" },
+        "patientName": { "type": "string", "description": "Name of the patient" },
+        "patientEmail": { "type": "string", "description": "Email of the patient" },
+        "doctorId": { "type": "string", "description": "User ID of the doctor" },
+        "doctorName": { "type": "string", "description": "Name of the doctor" },
+        "date": { "type": "string", "description": "Appointment date" },
+        "time": { "type": "string", "description": "Appointment time" },
+        "status": { "type": "string", "enum": ["booked", "confirmed", "completed"], "description": "Status of the appointment" },
+        "complaint": { "type": "string", "description": "Symptom or complaint" },
+        "painScale": { "type": "integer", "description": "Pain scale rating" },
+        "allergies": { "type": "string", "description": "Known allergies" },
+        "currentMeds": { "type": "string", "description": "Currently prescribed medications" },
+        "duration": { "type": "string", "description": "Duration of symptoms" },
+        "googleEventId": { "type": "string", "description": "Synced Google Calendar event ID" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Booking timestamp" }
+      },
+      "required": ["patientId", "patientName", "patientEmail", "doctorId", "doctorName", "date", "time"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts"
+    },
+    "/otps/{otpId}": {
+      "schema": "OTP",
+      "description": "OTPs for user actions"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Clinical consultation appointments"
+    }
+  }
+}
