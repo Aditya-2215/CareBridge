@@ -8,11 +8,20 @@ import dns from "dns";
 import dotenv from "dotenv";
 import fs from "fs";
 import admin from "firebase-admin";
+
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
 // Configure local environment
 dotenv.config();
+
+// Global handler for unhandled promise rejections to prevent crashing from external SDK background tasks
+process.on("unhandledRejection", (reason: any) => {
+  console.warn("⚠️ Unhandled Promise Rejection:", reason?.message || reason);
+  if (reason?.stack) {
+    console.warn(reason.stack);
+  }
+});
 
 // Ensure node resolves localhost correctly
 dns.setDefaultResultOrder("ipv4first");
@@ -20,7 +29,7 @@ dns.setDefaultResultOrder("ipv4first");
 const app = express();
 app.use(express.json());
 
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // ============================================================================
 // DATABASE CONFIGURATION, STATE & WRAPPERS
@@ -80,6 +89,16 @@ mongoose.connection.on("reconnected", () => {
 });
 
 /**
+ * Helper to check if Firestore credentials or GCP environment are available.
+ * Bypassing Firestore prevents background gRPC connection checks from failing and throwing.
+ */
+function hasFirebaseCredentials(): boolean {
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS) return true;
+  if (process.env.K_SERVICE || process.env.GAE_SERVICE || process.env.GOOGLE_CLOUD_PROJECT) return true;
+  return false;
+}
+
+/**
  * Initializes and verifies all datastores cleanly.
  * The server will NEVER crash even if Firestore credentials are completely missing.
  */
@@ -111,7 +130,8 @@ async function initializeDatabases() {
   }
 
   // 2. Initialize and Verify Firestore
-  if (firebaseAdminApp) {
+  const canAttemptFirestore = firebaseAdminApp && hasFirebaseCredentials();
+  if (canAttemptFirestore) {
     try {
       let rawFirestoreDb: any = null;
       if (firebaseConfig && firebaseConfig.firestoreDatabaseId) {
@@ -122,8 +142,12 @@ async function initializeDatabases() {
 
       if (rawFirestoreDb) {
         // Attempt a quick, lightweight query with a short timeout to verify credentials/permissions
+        const verificationPromise = rawFirestoreDb.collection("doctors").limit(1).get();
+        // Prevent unhandled promise rejection if credentials fail or timeout occurs
+        verificationPromise.catch(() => {});
+
         await Promise.race([
-          rawFirestoreDb.collection("doctors").limit(1).get(),
+          verificationPromise,
           new Promise((_, reject) => setTimeout(() => reject(new Error("Verification timeout")), 3000))
         ]);
         firestoreDb = rawFirestoreDb;
@@ -216,7 +240,6 @@ const PatientSchema = new mongoose.Schema({
 });
 
 PatientSchema.index({ phone: 1 });
-PatientSchema.index({ email: 1 });
 
 // ----------------------------------------------------------------------------
 // 2. Doctor Schema (Mongoose) - Stores clinician professional details, sessions and credentials
@@ -273,7 +296,6 @@ const DoctorSchema = new mongoose.Schema({
 });
 
 DoctorSchema.index({ registrationNumber: 1 });
-DoctorSchema.index({ email: 1 });
 
 // ----------------------------------------------------------------------------
 // 3. Patient Login Log Schema (Mongoose) - Track every patient login attempt
