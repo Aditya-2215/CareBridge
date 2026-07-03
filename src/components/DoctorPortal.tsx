@@ -74,110 +74,155 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // States
-  const [doctorInfo, setDoctorInfo] = useState({
-    name: "Dr. Sarah Jenkins",
-    specialization: "Cardiologist & Clinical Therapeutics",
-    qualifications: "MD, FACC - Harvard Medical School",
-    clinic: "CareBridge Premier Heart Center",
-    languages: "English, Spanish",
-    availability: "Mon - Fri (09:00 AM - 05:00 PM)",
-    twoFactorEnabled: true,
-    calendarSynced: true,
+  const [doctorInfo, setDoctorInfo] = useState(() => {
+    const cached = localStorage.getItem("carebridge_user");
+    if (cached) {
+      try {
+        const u = JSON.parse(cached);
+        return {
+          name: u.name || "Dr. Sarah Jenkins",
+          specialization: u.specialty || "Cardiologist & Clinical Therapeutics",
+          qualifications: u.qualifications || "MD, FACC - Harvard Medical School",
+          clinic: u.hospital || "CareBridge Premier Heart Center",
+          languages: u.languages || "English, Spanish",
+          availability: u.availability || "Mon - Fri (09:00 AM - 05:00 PM)",
+          twoFactorEnabled: true,
+          calendarSynced: true,
+          profileImage: u.profileImage || "",
+          doctorId: u.doctorId || "CB-DOC-001092",
+        };
+      } catch {
+        // Fallback
+      }
+    }
+    return {
+      name: "Dr. Sarah Jenkins",
+      specialization: "Cardiologist & Clinical Therapeutics",
+      qualifications: "MD, FACC - Harvard Medical School",
+      clinic: "CareBridge Premier Heart Center",
+      languages: "English, Spanish",
+      availability: "Mon - Fri (09:00 AM - 05:00 PM)",
+      twoFactorEnabled: true,
+      calendarSynced: true,
+      profileImage: "",
+      doctorId: "CB-DOC-001092",
+    };
   });
+
+  // Logout confirmation state
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Simulator controls
   const [simulateErrorState, setSimulateErrorState] = useState(false);
   const [simulateEmptyState, setSimulateEmptyState] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
-  // Patient Database
-  const [patients, setPatients] = useState<PatientRecord[]>([
-    {
-      id: "pat-1",
-      name: "Liam Chen",
-      age: 42,
-      gender: "Male",
-      bloodType: "A-Positive",
-      phone: "(555) 019-8822",
-      email: "liam.chen@gmail.com",
-      allergies: "Penicillin, Seasonal Pollen",
-      lastVisit: "2026-06-15",
-      status: "Stable",
-      chiefComplaint: "Slight thoracic discomfort after aerobic activity",
-      medications: ["Atorvastatin 20mg", "Lisinopril 10mg"]
-    },
-    {
-      id: "pat-2",
-      name: "Alex Mercer",
-      age: 29,
-      gender: "Non-binary",
-      bloodType: "O-Negative",
-      phone: "(555) 012-9988",
-      email: "alex.mercer@carebridge.com",
-      allergies: "Peanuts, Dust Mites",
-      lastVisit: "2026-06-28",
-      status: "Stable",
-      chiefComplaint: "Routine chronic cardiovascular check-up",
-      medications: ["Lisinopril 10mg", "Amoxicillin 500mg"]
-    },
-    {
-      id: "pat-3",
-      name: "Sophia Rodriguez",
-      age: 61,
-      gender: "Female",
-      bloodType: "B-Positive",
-      phone: "(555) 014-3344",
-      email: "sophia.rod@yahoo.com",
-      allergies: "Sulfa Drugs",
-      lastVisit: "2026-05-10",
-      status: "Under Review",
-      chiefComplaint: "Arrythmia spikes and resting heart rate of 95",
-      medications: ["Metoprolol 50mg", "Aspirin 81mg"]
-    }
-  ]);
+  // Patient Database - cleared of mock data
+  const [patients, setPatients] = useState<PatientRecord[]>([]);
 
-  // Appointments Database
-  const [appointments, setAppointments] = useState<DoctorAppointment[]>([
-    {
-      id: "appt-1",
-      patientId: "pat-2",
-      patientName: "Alex Mercer",
-      age: 29,
-      time: "09:30 AM",
-      date: "2026-06-30",
-      urgency: "Medium",
-      status: "Waiting",
-      complaint: "Cardiovascular tightness after mild exercise, accompanied by a minor cough.",
-      aiSymptomSummary: "Urgent primary triage is NOT required. Symptoms suggest potential secondary bronchial inflammation combined with known stable cardiovascular history. Recommend blood lipid verification and thoracic auscultation.",
-      painScale: 4,
-    },
-    {
-      id: "appt-2",
-      patientId: "pat-3",
-      patientName: "Sophia Rodriguez",
-      age: 61,
-      time: "11:00 AM",
-      date: "2026-06-30",
-      urgency: "High",
-      status: "Upcoming",
-      complaint: "Sudden onset of persistent tachycardia spikes and sporadic lightheadedness during resting periods.",
-      aiSymptomSummary: "MODERATE ALERT. High resting heart rate combined with sudden spikes in a 61yo patient warrant direct ECG analysis. Triage indicates potential atrial fibrillation. Rule out acute coronary events first.",
-      painScale: 6,
-    },
-    {
-      id: "appt-3",
-      patientId: "pat-1",
-      patientName: "Liam Chen",
-      age: 42,
-      time: "02:00 PM",
-      date: "2026-06-30",
-      urgency: "Low",
-      status: "Upcoming",
-      complaint: "Follow-up prescription renewal and general lipid panel metric debrief.",
-      aiSymptomSummary: "ROUTINE REVIEW. Patient has excellent compliance history. Lipid markers are approaching optimal goals. Renew Atorvastatin and Lisinopril if therapeutic boundaries remain safe.",
-      painScale: 1,
-    }
-  ]);
+  // Appointments Database - cleared of mock data
+  const [appointments, setAppointments] = useState<DoctorAppointment[]>([]);
+
+  useEffect(() => {
+    const loadDoctorPortalData = async () => {
+      const storedUser = localStorage.getItem("carebridge_user");
+      const userId = localStorage.getItem("carebridge_userId");
+      if (!userId) return;
+
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          setDoctorInfo(prev => ({
+            ...prev,
+            name: parsed.name || parsed.email,
+            specialization: parsed.specialty || "General Medicine Specialist",
+            qualifications: parsed.qualifications || prev.qualifications,
+            clinic: parsed.hospital || prev.clinic,
+            languages: parsed.languages || prev.languages,
+            availability: parsed.availability || prev.availability,
+            profileImage: parsed.profileImage || prev.profileImage,
+            doctorId: parsed.doctorId || prev.doctorId,
+          }));
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      try {
+        // Fetch fresh doctor clinical profile from DB
+        const dbRes = await fetch(`/api/users/me?userId=${userId}`);
+        if (dbRes.ok) {
+          const dbData = await dbRes.json();
+          if (dbData.user) {
+            setDoctorInfo(prev => ({
+              ...prev,
+              name: dbData.user.name || prev.name,
+              specialization: dbData.user.specialty || prev.specialization,
+              qualifications: dbData.user.qualifications || prev.qualifications,
+              clinic: dbData.user.hospital || prev.clinic,
+              languages: dbData.user.languages || prev.languages,
+              availability: dbData.user.availability || prev.availability,
+              profileImage: dbData.user.profileImage || prev.profileImage,
+              doctorId: dbData.user.doctorId || prev.doctorId,
+            }));
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch doctor user details from DB", e);
+      }
+
+      try {
+        // Fetch real appointments for this doctor
+        const apptRes = await fetch(`/api/appointments?userId=${userId}&role=doctor`);
+        if (apptRes.ok) {
+          const apptData = await apptRes.json();
+          if (Array.isArray(apptData.appointments)) {
+            const mapped = apptData.appointments.map((a: any) => ({
+              id: a._id || a.id,
+              patientId: a.patientId || "pat-gen",
+              patientName: a.patientName || "Registered Patient",
+              age: a.patientAge || 35,
+              time: a.time,
+              date: a.date,
+              urgency: a.urgency || "Medium",
+              status: a.status ? (a.status.charAt(0).toUpperCase() + a.status.slice(1)) : "Upcoming",
+              complaint: a.complaint || "Routine review session.",
+              aiSymptomSummary: a.aiSummary || "Triage results completed. Baseline indicators are within standard therapeutic ranges.",
+              painScale: a.painScale || 5
+            }));
+            setAppointments(mapped);
+          }
+        }
+
+        // Fetch registered patients
+        const patRes = await fetch("/api/patients");
+        if (patRes.ok) {
+          const patData = await patRes.json();
+          if (Array.isArray(patData.patients)) {
+            const mapped = patData.patients.map((p: any) => ({
+              id: p._id || p.id,
+              name: p.name || p.email,
+              age: p.age || 35,
+              gender: p.gender || "Not specified",
+              bloodType: p.bloodType || "O-Positive",
+              phone: p.phone || "Not provided",
+              email: p.email,
+              allergies: p.allergies || "None",
+              lastVisit: p.lastVisit || "N/A",
+              status: p.status || "Stable",
+              chiefComplaint: p.notes || "Regular visit.",
+              medications: p.medications || []
+            }));
+            setPatients(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load real-time doctor portal information", err);
+      }
+    };
+
+    loadDoctorPortalData();
+  }, []);
 
   // Active Selected Appointment for details panel
   const [selectedApptId, setSelectedApptId] = useState<string>("appt-1");
@@ -189,10 +234,8 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
   const [followUpDays, setFollowUpDays] = useState("30");
   const [isConsultationActive, setIsConsultationActive] = useState(false);
 
-  // Prescription Builder Items
-  const [prescriptionBuilderList, setPrescriptionBuilderList] = useState<PrescribedMedicine[]>([
-    { id: "med-1", name: "Metoprolol Succinate", dosage: "25mg", frequency: "Once daily in the morning", duration: "30 days", instructions: "Take with food. Do not crush." }
-  ]);
+  // Prescription Builder Items - cleared of mock data
+  const [prescriptionBuilderList, setPrescriptionBuilderList] = useState<PrescribedMedicine[]>([]);
   const [newMedName, setNewMedName] = useState("");
   const [newMedDosage, setNewMedDosage] = useState("");
   const [newMedFreq, setNewMedFreq] = useState("");
@@ -211,7 +254,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
   // Doctor AI Assistant panel states
   const [doctorAiResponseState, setDoctorAiResponseState] = useState<"normal" | "accepted" | "ignored" | "edited">("normal");
-  const [doctorAiEditedSummary, setDoctorAiEditedSummary] = useState("Alex exhibits mild respiratory/seasonal sinus congestion. Baseline cardiovascular stats are fully stable under daily Lisinopril medication. Recommendation: 14 days standard checkup.");
+  const [doctorAiEditedSummary, setDoctorAiEditedSummary] = useState("");
   const [doctorAiShowPanel, setDoctorAiShowPanel] = useState(true);
 
   // Leave Management States
@@ -219,21 +262,13 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
   const [leaveEndDate, setLeaveEndDate] = useState("2026-07-15");
   const [leaveReason, setLeaveReason] = useState("Annual Medical Research Symposium");
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
-  const [affectedPatients, setAffectedPatients] = useState<string[]>(["Sophia Rodriguez", "Liam Chen"]);
+  const [affectedPatients, setAffectedPatients] = useState<string[]>([]);
 
-  // Follow-up Manager Database
-  const [followups, setFollowups] = useState([
-    { id: "fu-1", name: "Alex Mercer", condition: "Cardiovascular tight", date: "2026-07-15", status: "Pending", phone: "(555) 012-9988" },
-    { id: "fu-2", name: "Liam Chen", condition: "Hyperlipidemia check", date: "2026-07-30", status: "Pending", phone: "(555) 019-8822" },
-    { id: "fu-3", name: "Michael Vance", condition: "Post-op arrhythmia", date: "2026-06-20", status: "Completed", phone: "(555) 123-4567" }
-  ]);
+  // Follow-up Manager Database - cleared of mock data
+  const [followups, setFollowups] = useState<any[]>([]);
 
-  // Notifications List
-  const [notifications, setNotifications] = useState<DoctorNotification[]>([
-    { id: "not-1", title: "New Appointment Booked", description: "Sophia Rodriguez has reserved a 11:00 AM consultation slot.", time: "10 mins ago", unread: true, type: "booking" },
-    { id: "not-2", title: "Patient Lab Report Uploaded", description: "Alex Mercer added 'Lipid Profile Diagnostic.pdf' to their dashboard.", time: "1 hour ago", unread: true, type: "report" },
-    { id: "not-3", title: "AI Diagnostic Queue Ready", description: "Triage algorithm completed the primary symptom summary for Liam Chen.", time: "2 hours ago", unread: false, type: "ai" }
-  ]);
+  // Notifications List - cleared of mock data
+  const [notifications, setNotifications] = useState<DoctorNotification[]>([]);
 
   // Analytics KPIs
   const [analyticsStats] = useState({
@@ -248,6 +283,42 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
     setTimeout(() => {
       setToastMessage("");
     }, 4000);
+  };
+
+  const handleSaveDoctorProfile = async () => {
+    const userId = localStorage.getItem("carebridge_userId");
+    if (!userId) {
+      triggerToast("Authentication session expired. Please re-login.");
+      return;
+    }
+    try {
+      const response = await fetch("/api/users/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId,
+          name: doctorInfo.name,
+          specialty: doctorInfo.specialization,
+          qualifications: doctorInfo.qualifications,
+          hospital: doctorInfo.clinic,
+          languages: doctorInfo.languages,
+          availability: doctorInfo.availability,
+          profileImage: doctorInfo.profileImage,
+        }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        if (data.user) {
+          localStorage.setItem("carebridge_user", JSON.stringify(data.user));
+        }
+        triggerToast("Clinical credentials and qualifications synchronized in central DB.");
+      } else {
+        triggerToast(data.error || "Failed to sync clinical credentials.");
+      }
+    } catch (err) {
+      console.error(err);
+      triggerToast("Failed to connect to the profile gateway.");
+    }
   };
 
   const handleStartConsultation = (appt: DoctorAppointment) => {
@@ -452,12 +523,12 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
           </button>
           
           <button
-            onClick={onClose}
+            onClick={() => setShowLogoutModal(true)}
             className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-semibold text-red-600 hover:text-red-700 hover:bg-red-50/50 rounded-xl transition-all"
             id="doctor-sidebar-exit"
           >
             <LogOut className="w-4.5 h-4.5" />
-            {!isSidebarCollapsed && <span>Close Hub</span>}
+            {!isSidebarCollapsed && <span>Log out</span>}
           </button>
         </div>
       </aside>
@@ -567,12 +638,21 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
             {/* Profile Menus */}
             <div className="flex items-center gap-2.5 pl-2.5 border-l border-gray-100">
-              <div className="w-9 h-9 rounded-full bg-emerald-500 text-white flex items-center justify-center font-black text-xs">
-                SJ
-              </div>
+              {doctorInfo.profileImage ? (
+                <img
+                  src={doctorInfo.profileImage}
+                  alt={doctorInfo.name}
+                  referrerPolicy="no-referrer"
+                  className="w-9 h-9 rounded-full object-cover border border-emerald-100"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-[#E9F8F1] border border-emerald-100 flex items-center justify-center text-[#2E8B57] font-black text-xs animate-pulse">
+                  {doctorInfo.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)}
+                </div>
+              )}
               <div className="hidden sm:block text-left font-sans">
                 <p className="text-xs font-black text-gray-900 leading-none">{doctorInfo.name}</p>
-                <span className="text-[9px] text-[#2E8B57] font-bold">FACC Cardiologist</span>
+                <span className="text-[9px] text-[#2E8B57] font-bold">{doctorInfo.specialization}</span>
               </div>
             </div>
 
@@ -630,10 +710,10 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                 </div>
 
                 <button 
-                  onClick={onClose}
+                  onClick={() => setShowLogoutModal(true)}
                   className="w-full py-3 bg-red-50 text-red-600 rounded-xl text-xs font-bold"
                 >
-                  Return to Home Page
+                  Log out
                 </button>
               </motion.div>
             </>
@@ -726,12 +806,14 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                       </p>
                       
                       <div className="flex flex-wrap gap-2 pt-2">
-                        <button 
-                          onClick={() => handleStartConsultation(appointments[0])}
-                          className="px-5 py-2.5 bg-white text-[#2E8B57] text-xs font-bold rounded-full shadow-md active:scale-95 transition-all hover:bg-emerald-50"
-                        >
-                          Start Session: {appointments[0].patientName}
-                        </button>
+                        {appointments.length > 0 && (
+                          <button 
+                            onClick={() => handleStartConsultation(appointments[0])}
+                            className="px-5 py-2.5 bg-white text-[#2E8B57] text-xs font-bold rounded-full shadow-md active:scale-95 transition-all hover:bg-emerald-50"
+                          >
+                            Start Session: {appointments[0].patientName}
+                          </button>
+                        )}
                         <button 
                           onClick={() => setIsLeaveModalOpen(true)}
                           className="px-5 py-2.5 bg-[#2E8B57]/35 border border-white/20 text-white text-xs font-bold rounded-full hover:bg-[#2E8B57]/50 transition-all"
@@ -766,100 +848,116 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                     {/* LEFT COLUMN: TODAY'S TIMELINE GRID (col-span-8) */}
                     <div className="lg:col-span-8 space-y-6">
                       
-                      <div className="bg-white border border-[#E5E7EB] p-6 rounded-3xl shadow-sm space-y-4">
-                        <div className="flex justify-between items-center border-b border-gray-100 pb-3">
-                          <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest flex items-center gap-1.5">
-                            <CalendarClock className="w-4 h-4 text-[#2E8B57]" /> Consultation Queue Timeline
-                          </h3>
-                          <span className="text-xs font-bold text-gray-500">
-                            {appointments.length} Consults Left Today
-                          </span>
+                      {appointments.length === 0 ? (
+                        <div className="bg-white border border-[#E5E7EB] p-12 rounded-3xl shadow-sm text-center space-y-3">
+                          <div className="w-16 h-16 bg-[#E9F8F1] rounded-full flex items-center justify-center text-[#2E8B57] mx-auto">
+                            <CalendarClock className="w-8 h-8" />
+                          </div>
+                          <h4 className="text-base font-black text-gray-900">Your Consultation Queue is Empty</h4>
+                          <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
+                            No real-life patients have booked appointments with you yet. Once patients schedule a session, they will appear dynamically in this triage queue.
+                          </p>
                         </div>
+                      ) : (
+                        <>
+                          <div className="bg-white border border-[#E5E7EB] p-6 rounded-3xl shadow-sm space-y-4">
+                            <div className="flex justify-between items-center border-b border-gray-100 pb-3">
+                              <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest flex items-center gap-1.5">
+                                <CalendarClock className="w-4 h-4 text-[#2E8B57]" /> Consultation Queue Timeline
+                              </h3>
+                              <span className="text-xs font-bold text-gray-500">
+                                {appointments.length} Consults Left Today
+                              </span>
+                            </div>
 
-                        {/* Interactive Queue Timeline Row */}
-                        <div className="space-y-3">
-                          {appointments.map((appt) => (
-                            <div 
-                              key={appt.id}
-                              onClick={() => setSelectedApptId(appt.id)}
-                              className={`p-4 border rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer transition-all gap-4 text-left ${
-                                selectedApptId === appt.id 
-                                  ? "bg-emerald-50/50 border-[#2E8B57] ring-1 ring-[#2E8B57]" 
-                                  : "bg-white border-gray-200 hover:border-gray-300"
-                              }`}
-                            >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-[#E9F8F1] border border-emerald-100 flex items-center justify-center text-[#2E8B57] font-black text-xs">
-                                  {appt.patientName.split(" ").map(n => n[0]).join("")}
-                                </div>
-                                <div>
-                                  <div className="flex items-center gap-1.5">
-                                    <h4 className="text-xs font-black text-gray-900">{appt.patientName}</h4>
-                                    <span className={`text-[8px] font-bold uppercase px-1.5 py-0.2 rounded ${
-                                      appt.urgency === "High" 
-                                        ? "bg-red-100 text-red-600" 
-                                        : appt.urgency === "Medium"
-                                        ? "bg-amber-100 text-amber-600"
-                                        : "bg-blue-100 text-blue-600"
-                                    }`}>
-                                      {appt.urgency} Urgency
-                                    </span>
+                            {/* Interactive Queue Timeline Row */}
+                            <div className="space-y-3">
+                              {appointments.map((appt) => (
+                                <div 
+                                  key={appt.id}
+                                  onClick={() => setSelectedApptId(appt.id)}
+                                  className={`p-4 border rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer transition-all gap-4 text-left ${
+                                    selectedApptId === appt.id 
+                                      ? "bg-emerald-50/50 border-[#2E8B57] ring-1 ring-[#2E8B57]" 
+                                      : "bg-white border-gray-200 hover:border-gray-300"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-[#E9F8F1] border border-emerald-100 flex items-center justify-center text-[#2E8B57] font-black text-xs">
+                                      {appt.patientName.split(" ").map(n => n[0]).join("")}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-1.5">
+                                        <h4 className="text-xs font-black text-gray-900">{appt.patientName}</h4>
+                                        <span className={`text-[8px] font-bold uppercase px-1.5 py-0.2 rounded ${
+                                          appt.urgency === "High" 
+                                            ? "bg-red-100 text-red-600" 
+                                            : appt.urgency === "Medium"
+                                            ? "bg-amber-100 text-amber-600"
+                                            : "bg-blue-100 text-blue-600"
+                                        }`}>
+                                          {appt.urgency} Urgency
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-gray-500 mt-0.5">
+                                        Age: {appt.age} • Slot: <strong className="text-gray-700">{appt.time}</strong>
+                                      </p>
+                                    </div>
                                   </div>
-                                  <p className="text-[10px] text-gray-500 mt-0.5">
-                                    Age: {appt.age} • Slot: <strong className="text-gray-700">{appt.time}</strong>
+
+                                  <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                      appt.status === "Waiting" ? "bg-amber-500/10 text-amber-600 border border-amber-200/50" : "bg-gray-100 text-gray-600"
+                                    }`}>
+                                      {appt.status}
+                                    </span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleStartConsultation(appt);
+                                      }}
+                                      className="px-3.5 py-1.5 bg-[#2E8B57] text-white rounded-xl text-[10px] font-bold hover:bg-[#2E8B57]/90 active:scale-95 transition-all"
+                                    >
+                                      Begin Consult
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Diagnostic Insights Panel */}
+                          {activeAppt && (
+                            <div className="bg-white border border-[#E5E7EB] p-6 rounded-3xl shadow-sm text-left">
+                              <div className="border-b pb-3 mb-4 flex items-center justify-between">
+                                <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest flex items-center gap-1.5">
+                                  <Activity className="w-4 h-4 text-[#2E8B57]" /> Selected Patient AI Pre-Triage Detail
+                                </h3>
+                                <span className="text-[10px] font-bold font-mono text-gray-400">ID: {activeAppt.id}</span>
+                              </div>
+
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                  <span className="text-[9px] uppercase font-bold text-gray-400">Chief Complaint</span>
+                                  <p className="text-xs text-gray-800 font-medium mt-1 leading-relaxed">
+                                    "{activeAppt.complaint}"
+                                  </p>
+                                </div>
+                                
+                                <div className="bg-gradient-to-br from-emerald-950 to-emerald-900 p-4 rounded-2xl text-white md:col-span-2 relative overflow-hidden">
+                                  <div className="absolute top-0 right-0 w-16 h-16 bg-[#2E8B57]/20 rounded-full blur-xl" />
+                                  <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded tracking-widest">
+                                    <Sparkles className="w-3 h-3 text-[#5CC49A] animate-pulse" /> Pre-Triage AI Summary
+                                  </span>
+                                  <p className="text-[11px] text-emerald-10/90 leading-relaxed font-sans mt-2">
+                                    {activeAppt.aiSymptomSummary}
                                   </p>
                                 </div>
                               </div>
-
-                              <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                                  appt.status === "Waiting" ? "bg-amber-500/10 text-amber-600 border border-amber-200/50" : "bg-gray-100 text-gray-600"
-                                }`}>
-                                  {appt.status}
-                                </span>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleStartConsultation(appt);
-                                  }}
-                                  className="px-3.5 py-1.5 bg-[#2E8B57] text-white rounded-xl text-[10px] font-bold hover:bg-[#2E8B57]/90 active:scale-95 transition-all"
-                                >
-                                  Begin Consult
-                                </button>
-                              </div>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Diagnostic Insights Panel */}
-                      <div className="bg-white border border-[#E5E7EB] p-6 rounded-3xl shadow-sm text-left">
-                        <div className="border-b pb-3 mb-4 flex items-center justify-between">
-                          <h3 className="text-xs font-black uppercase text-gray-400 tracking-widest flex items-center gap-1.5">
-                            <Activity className="w-4 h-4 text-[#2E8B57]" /> Selected Patient AI Pre-Triage Detail
-                          </h3>
-                          <span className="text-[10px] font-bold font-mono text-gray-400">ID: {activeAppt.id}</span>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                            <span className="text-[9px] uppercase font-bold text-gray-400">Chief Complaint</span>
-                            <p className="text-xs text-gray-800 font-medium mt-1 leading-relaxed">
-                              "{activeAppt.complaint}"
-                            </p>
-                          </div>
-                          
-                          <div className="bg-gradient-to-br from-emerald-950 to-emerald-900 p-4 rounded-2xl text-white md:col-span-2 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-16 h-16 bg-[#2E8B57]/20 rounded-full blur-xl" />
-                            <span className="inline-flex items-center gap-1 text-[8px] font-black uppercase bg-emerald-800 text-emerald-200 px-2 py-0.5 rounded tracking-widest">
-                              <Sparkles className="w-3 h-3 text-[#5CC49A] animate-pulse" /> Pre-Triage AI Summary
-                            </span>
-                            <p className="text-[11px] text-emerald-10/90 leading-relaxed font-sans mt-2">
-                              {activeAppt.aiSymptomSummary}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                          )}
+                        </>
+                      )}
 
                     </div>
 
@@ -996,21 +1094,38 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
               {/* ----------------- TAB: CONSULTATION WORKSPACE ----------------- */}
               {activeTab === "consultation-workspace" && (
-                <motion.div
-                  key="consultation"
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -15 }}
-                  className="space-y-6 text-left"
-                >
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b">
-                    <div>
-                      <span className="text-[10px] uppercase font-extrabold bg-[#2E8B57]/10 text-[#2E8B57] border border-emerald-200 px-2.5 py-1 rounded-md tracking-wider animate-pulse">
-                        Clinician Workspace Active
-                      </span>
-                      <h3 className="text-xl font-black text-gray-900 mt-2">Active Consultation: {activeAppt.patientName}</h3>
-                      <p className="text-xs text-gray-500">Document clinical diagnosis, prescriptions, and transmit AI health summaries.</p>
+                !activeAppt ? (
+                  <div className="bg-white border border-[#E5E7EB] p-8 rounded-3xl text-center shadow-sm max-w-lg mx-auto mt-12 space-y-4">
+                    <div className="w-16 h-16 bg-gray-50 text-gray-400 rounded-full flex items-center justify-center mx-auto border border-dashed">
+                      <Activity className="w-8 h-8" />
                     </div>
+                    <h3 className="text-base font-black text-gray-900">No Consultation Selected</h3>
+                    <p className="text-xs text-gray-500 leading-relaxed text-center">
+                      You do not have any active appointments or diagnostic submissions selected to begin consultations. Go back to your Clinical Dashboard and select a patient record.
+                    </p>
+                    <button
+                      onClick={() => setActiveTab("dashboard")}
+                      className="px-4 py-2 bg-[#2E8B57] text-white text-xs font-bold rounded-xl hover:bg-emerald-700 active:scale-95 transition-all cursor-pointer"
+                    >
+                      Return to Dashboard
+                    </button>
+                  </div>
+                ) : (
+                  <motion.div
+                    key="consultation"
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -15 }}
+                    className="space-y-6 text-left"
+                  >
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b">
+                      <div>
+                        <span className="text-[10px] uppercase font-extrabold bg-[#2E8B57]/10 text-[#2E8B57] border border-emerald-200 px-2.5 py-1 rounded-md tracking-wider animate-pulse">
+                          Clinician Workspace Active
+                        </span>
+                        <h3 className="text-xl font-black text-gray-900 mt-2">Active Consultation: {activeAppt.patientName}</h3>
+                        <p className="text-xs text-gray-500">Document clinical diagnosis, prescriptions, and transmit AI health summaries.</p>
+                      </div>
 
                     <div className="flex gap-2">
                       <button 
@@ -1469,6 +1584,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
                   </div>
                 </motion.div>
+                )
               )}
 
               {/* ----------------- TAB: PATIENTS ----------------- */}
@@ -1517,7 +1633,9 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                         <div className="mt-5 flex gap-2">
                           <button 
                             onClick={() => {
-                              setSelectedApptId(appointments[0].id);
+                              if (appointments.length > 0) {
+                                setSelectedApptId(appointments[0].id);
+                              }
                               triggerToast(`Loading chronic chart context for ${pat.name}...`);
                             }}
                             className="flex-1 py-2 bg-gray-50 hover:bg-gray-100 rounded-xl text-xs font-bold text-gray-700 transition-all"
@@ -1739,17 +1857,57 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                   </div>
 
                   <div className="bg-white border p-6 rounded-3xl shadow-sm space-y-6">
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="w-16 h-16 rounded-full bg-[#E9F8F1] border border-emerald-100 flex items-center justify-center text-[#2E8B57] font-black text-xl shrink-0">
-                        SJ
-                      </div>
+                    <div className="flex flex-col sm:flex-row items-center gap-4 border-b pb-5">
+                      {doctorInfo.profileImage ? (
+                        <img
+                          src={doctorInfo.profileImage}
+                          alt={doctorInfo.name}
+                          referrerPolicy="no-referrer"
+                          className="w-16 h-16 rounded-full object-cover border border-emerald-100 shrink-0"
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-[#E9F8F1] border border-emerald-100 flex items-center justify-center text-[#2E8B57] font-black text-xl shrink-0">
+                          {doctorInfo.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2)}
+                        </div>
+                      )}
                       <div className="text-center sm:text-left">
                         <h4 className="text-base font-black text-gray-900">{doctorInfo.name}</h4>
-                        <p className="text-xs text-gray-500 font-medium">{doctorInfo.specialization}</p>
+                        <p className="text-xs text-gray-500 font-bold tracking-tight">{doctorInfo.specialization} (ID: {doctorInfo.doctorId})</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Clinician Full Name</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2 text-xs border rounded-xl"
+                          value={doctorInfo.name}
+                          onChange={(e) => setDoctorInfo({ ...doctorInfo, name: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Specialty Specialization</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2 text-xs border rounded-xl"
+                          value={doctorInfo.specialization}
+                          onChange={(e) => setDoctorInfo({ ...doctorInfo, specialization: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Profile Photo URL</label>
+                        <input 
+                          type="text" 
+                          className="w-full px-4 py-2 text-xs border rounded-xl"
+                          placeholder="https://example.com/photo.jpg"
+                          value={doctorInfo.profileImage}
+                          onChange={(e) => setDoctorInfo({ ...doctorInfo, profileImage: e.target.value })}
+                        />
+                      </div>
+
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase text-gray-500 tracking-wider">Qualifications Credentials</label>
                         <input 
@@ -1792,8 +1950,8 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
                     </div>
 
                     <button 
-                      onClick={() => triggerToast("Qualifications database records updated on Spanner ledger.")}
-                      className="px-5 py-2.5 bg-[#2E8B57] text-white text-xs font-bold rounded-xl"
+                      onClick={handleSaveDoctorProfile}
+                      className="px-5 py-2.5 bg-[#2E8B57] text-white text-xs font-bold rounded-xl active:scale-95 transition-all shadow-md shadow-emerald-600/10"
                     >
                       Save Profile Changes
                     </button>
@@ -1835,8 +1993,8 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
                     <div className="flex items-center justify-between p-3 border rounded-xl hover:bg-gray-50">
                       <div>
-                        <p className="font-bold text-[#111827]">Google Workspace Calendar Sync</p>
-                        <span className="text-[10px] text-gray-500 font-medium">Sync consultation timelines with your connected Google Calendar.</span>
+                        <p className="font-bold text-[#111827]">Device Calendar & Schedule Sync</p>
+                        <span className="text-[10px] text-gray-500 font-medium">Sync consultation timelines with your default calendar and scheduler.</span>
                       </div>
                       <input 
                         type="checkbox" 
@@ -1951,6 +2109,58 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ----------------- LOGOUT CONFIRMATION MODAL ----------------- */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLogoutModal(false)}
+              className="fixed inset-0 bg-black/45 z-[200] flex items-center justify-center p-4 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="fixed inset-0 m-auto max-w-sm h-fit bg-white border border-gray-100 rounded-3xl p-6 z-[201] text-left font-sans text-gray-900 shadow-2xl"
+              id="logout-confirmation-modal"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center border border-red-100">
+                  <LogOut className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-gray-950">Confirm Log out</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                    Are you sure you want to end your active secure HIPAA clinical session? You will need to re-authenticate to view your medical files.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5 pt-2">
+                  <button
+                    onClick={() => setShowLogoutModal(false)}
+                    className="flex-1 py-2.5 px-4 bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded-xl border border-gray-100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLogoutModal(false);
+                      onClose();
+                    }}
+                    className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md shadow-red-600/10 transition-all"
+                    id="confirm-logout-btn"
+                  >
+                    Yes, Log out
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 

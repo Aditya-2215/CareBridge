@@ -16,19 +16,27 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
-    }
-
     // User accounts
     match /users/{userId} {
       allow read: if isSignedIn();
       allow write: if isOwner(userId);
     }
 
-    // OTP verification tokens
+    // Patient records
+    match /patients/{patientId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(patientId);
+    }
+
+    // Doctor details
+    match /doctors/{doctorId} {
+      allow read: if true; // Anyone can view available doctors
+      allow write: if isSignedIn() && request.auth.uid == doctorId;
+    }
+
+    // OTP verification tokens (strictly server-side/admin)
     match /otps/{otpId} {
-      allow read, write: if false; // Strictly restricted to server-side Admin SDK
+      allow read, write: if false;
     }
 
     // Clinical consultation appointments

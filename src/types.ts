@@ -39,53 +39,8 @@ export interface Feature {
   details: string;
 }
 
-// Static mock data for Doctors
-export const DOCTORS: Doctor[] = [
-  {
-    id: "doc-1",
-    name: "Dr. Sarah Jenkins",
-    specialty: "Cardiologist",
-    rating: 4.9,
-    reviewsCount: 312,
-    image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300",
-    availability: ["Monday", "Wednesday", "Friday"],
-    bio: "Board-certified cardiologist with 12+ years of experience in preventative heart care and digital health integration.",
-    hospital: "Metro Health Heart Institute"
-  },
-  {
-    id: "doc-2",
-    name: "Dr. Marcus Vance",
-    specialty: "Pediatrician",
-    rating: 4.8,
-    reviewsCount: 245,
-    image: "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=300&h=300",
-    availability: ["Tuesday", "Thursday", "Friday"],
-    bio: "Passionate about child development and family-centered pediatric care, utilizing interactive tech for wellness.",
-    hospital: "St. Jude Children's Clinic"
-  },
-  {
-    id: "doc-3",
-    name: "Dr. Elena Rostova",
-    specialty: "Neurologist",
-    rating: 4.95,
-    reviewsCount: 189,
-    image: "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=300&h=300",
-    availability: ["Monday", "Tuesday", "Thursday"],
-    bio: "Specializes in cognitive neurology, migraine therapy, and sleep medicine. Focuses on holistic patient care plans.",
-    hospital: "Neuroscience Alliance"
-  },
-  {
-    id: "doc-4",
-    name: "Dr. David Kim",
-    specialty: "General Physician",
-    rating: 4.7,
-    reviewsCount: 420,
-    image: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=300&h=300",
-    availability: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    bio: "Dedicated family doctor providing comprehensive preventative medical care, physicals, and digital follow-up guidance.",
-    hospital: "CareBridge Wellness Center"
-  }
-];
+// Static mock data for Doctors - cleared for production/real-life registration only
+export const DOCTORS: Doctor[] = [];
 
 // Static mock data for FAQs (at least 8 as requested)
 export const FAQS: FAQItem[] = [
@@ -106,8 +61,8 @@ export const FAQS: FAQItem[] = [
   },
   {
     id: "faq-4",
-    question: "Can I sync CareBridge with my Google Calendar?",
-    answer: "Yes, CareBridge supports two-way calendar sync with Google Calendar, Outlook, and Apple Calendar. Once you book an appointment, it automatically updates your personal schedule and sends custom pre-appointment forms directly to your email."
+    question: "Can I sync CareBridge with my personal calendar?",
+    answer: "Yes, CareBridge supports two-way calendar sync with most modern device calendars, Outlook, and Apple Calendar. Once you book an appointment, it automatically updates your personal schedule and sends custom pre-appointment forms directly to your email."
   },
   {
     id: "faq-5",

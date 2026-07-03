@@ -92,39 +92,26 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
   const [newDocBio, setNewDocBio] = useState("");
   const [newDocHospital, setNewDocHospital] = useState("");
 
-  // States for Patient Management
-  const [patients, setPatients] = useState<Patient[]>([
-    { id: "pat-1", name: "Liam Chen", age: 42, gender: "Male", contact: "liam.chen@gmail.com", lastVisit: "2026-06-15", status: "Active", allergies: "Penicillin", notes: "Prefers afternoon schedules." },
-    { id: "pat-2", name: "Alex Mercer", age: 29, gender: "Non-binary", contact: "alex.mercer@carebridge.com", lastVisit: "2026-06-28", status: "Active", allergies: "Peanuts", notes: "Routine checkups only." },
-    { id: "pat-3", name: "Sophia Rodriguez", age: 61, gender: "Female", contact: "sophia.rod@yahoo.com", lastVisit: "2026-05-10", status: "Active", allergies: "Sulfa Drugs", notes: "Arrythmia history." },
-    { id: "pat-4", name: "Michael Vance", age: 34, gender: "Male", contact: "michael.v@gmail.com", lastVisit: "2026-06-20", status: "Disabled", allergies: "None", notes: "In-active profile." }
-  ]);
+  // States for Patient Management - cleared of mock data
+  const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
 
-  // States for Appointment Management
-  const [appointments, setAppointments] = useState<AdminAppointment[]>([
-    { id: "apt-101", doctorName: "Dr. Sarah Jenkins", patientName: "Alex Mercer", date: "2026-06-30", time: "09:30 AM", status: "Pending", specialty: "Cardiologist" },
-    { id: "apt-102", doctorName: "Dr. Sarah Jenkins", patientName: "Sophia Rodriguez", date: "2026-06-30", time: "11:00 AM", status: "Confirmed", specialty: "Cardiologist" },
-    { id: "apt-103", doctorName: "Dr. Marcus Vance", patientName: "Liam Chen", date: "2026-07-02", time: "02:00 PM", status: "Confirmed", specialty: "Pediatrician" },
-    { id: "apt-104", doctorName: "Dr. Elena Rostova", patientName: "Michael Vance", date: "2026-07-03", time: "10:00 AM", status: "Completed", specialty: "Neurologist" }
-  ]);
+  // States for Appointment Management - cleared of mock data
+  const [appointments, setAppointments] = useState<AdminAppointment[]>([]);
   const [selectedAptFilter, setSelectedAptFilter] = useState("All");
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("week");
 
   // States for Specializations
   const [specializations, setSpecializations] = useState<Specialization[]>([
-    { id: "spec-1", name: "Cardiology", icon: "❤️", description: "Preventative heart care and telemetry.", doctorCount: 2 },
-    { id: "spec-2", name: "Pediatrics", icon: "👶", description: "Comprehensive children health and development.", doctorCount: 1 },
-    { id: "spec-3", name: "Neurology", icon: "🧠", description: "Migraine therapy and cognitive sleep neurology.", doctorCount: 1 }
+    { id: "spec-1", name: "Cardiology", icon: "❤️", description: "Preventative heart care and telemetry.", doctorCount: 0 },
+    { id: "spec-2", name: "Pediatrics", icon: "👶", description: "Comprehensive children health and development.", doctorCount: 0 },
+    { id: "spec-3", name: "Neurology", icon: "🧠", description: "Migraine therapy and cognitive sleep neurology.", doctorCount: 0 }
   ]);
   const [newSpecName, setNewSpecName] = useState("");
   const [newSpecDesc, setNewSpecDesc] = useState("");
 
-  // States for Leave Management
-  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([
-    { id: "leave-1", doctorName: "Dr. Marcus Vance", dateRange: "2026-07-10 to 2026-07-15", reason: "Annual Medical Symposium", status: "Pending", affectedCount: 4 },
-    { id: "leave-2", doctorName: "Dr. Elena Rostova", dateRange: "2026-07-05 to 2026-07-06", reason: "Personal Medical Leave", status: "Approved", affectedCount: 1 }
-  ]);
+  // States for Leave Management - cleared of mock data
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [selectedLeaveReq, setSelectedLeaveReq] = useState<LeaveRequest | null>(null);
 
   // States for AI Monitoring
@@ -148,10 +135,101 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
     Support: { read: true, create: false, update: true, delete: false, export: false }
   });
 
+  // Security Login Logs States
+  const [patientLoginLogs, setPatientLoginLogs] = useState<any[]>([]);
+  const [doctorLoginLogs, setDoctorLoginLogs] = useState<any[]>([]);
+  const [adminLoginLogs, setAdminLoginLogs] = useState<any[]>([]);
+  const [selectedLogType, setSelectedLogType] = useState<"all" | "patient" | "doctor" | "admin">("all");
+  const [isLogsLoading, setIsLogsLoading] = useState(false);
+
+  const fetchLoginLogs = async () => {
+    try {
+      setIsLogsLoading(true);
+      const response = await fetch("/api/admin/login-logs");
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setPatientLoginLogs(data.patientLogins || []);
+          setDoctorLoginLogs(data.doctorLogins || []);
+          setAdminLoginLogs(data.adminLogins || []);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch admin login logs:", err);
+    } finally {
+      setIsLogsLoading(false);
+    }
+  };
+
   // Settings State
   const [brandingName, setBrandingName] = useState("CareBridge");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [aiProvider, setAiProvider] = useState("Gemini-2.0-Flash-HIPAA");
+
+  React.useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const docRes = await fetch("/api/doctors");
+        if (docRes.ok) {
+          const docData = await docRes.json();
+          if (Array.isArray(docData.doctors)) {
+            const mappedDoctors = docData.doctors.map((d: any) => ({
+              id: d._id || d.id,
+              name: d.name || d.email,
+              specialty: d.specialty || "General Medicine",
+              rating: d.rating || 5.0,
+              reviewsCount: d.reviewsCount || 0,
+              image: d.image || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300",
+              availability: d.availability || ["Monday", "Wednesday", "Friday"],
+              bio: d.bio || "Registered medical specialist.",
+              hospital: d.hospital || "CareBridge Medical Center"
+            }));
+            setAdminDoctors(mappedDoctors);
+          }
+        }
+        
+        const patRes = await fetch("/api/patients");
+        if (patRes.ok) {
+          const patData = await patRes.json();
+          if (Array.isArray(patData.patients)) {
+            const mappedPatients = patData.patients.map((p: any) => ({
+              id: p._id || p.id,
+              name: p.name || p.email,
+              age: p.age || 35,
+              gender: p.gender || "Not specified",
+              contact: p.email,
+              lastVisit: p.lastVisit || "N/A",
+              status: p.status || "Active",
+              allergies: p.allergies || "None",
+              notes: p.notes || ""
+            }));
+            setPatients(mappedPatients);
+          }
+        }
+
+        const apptRes = await fetch("/api/appointments?role=admin&userId=admin");
+        if (apptRes.ok) {
+          const apptData = await apptRes.json();
+          if (Array.isArray(apptData.appointments)) {
+            const mappedAppointments = apptData.appointments.map((a: any) => ({
+              id: a._id || a.id,
+              doctorName: a.doctorName || "General Clinician",
+              patientName: a.patientName || "Registered Patient",
+              date: a.date,
+              time: a.time,
+              status: a.status ? (a.status.charAt(0).toUpperCase() + a.status.slice(1)) : "Confirmed",
+              specialty: a.specialty || "Primary Care"
+            }));
+            setAppointments(mappedAppointments);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load real-time admin portal data", err);
+      }
+    };
+    fetchData();
+    fetchLoginLogs();
+  }, []);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -1261,36 +1339,129 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
                   className="space-y-6 text-left"
                 >
                   <div className="bg-white border border-gray-200/80 rounded-2xl overflow-hidden shadow-sm">
-                    <div className="p-4 bg-gray-50 border-b flex items-center justify-between">
-                      <span className="text-xs font-black uppercase text-gray-400">HIPAA Security Audit Logs</span>
+                    <div className="p-4 bg-gray-50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div>
+                        <span className="text-xs font-black uppercase text-gray-400">HIPAA Security & Access Logs</span>
+                        <h3 className="text-lg font-black text-gray-900 mt-1">Unified Authentication Auditing</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => fetchLoginLogs()}
+                          disabled={isLogsLoading}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-gray-700 bg-white border rounded-xl hover:bg-gray-50 transition active:scale-95 disabled:opacity-50"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isLogsLoading ? "animate-spin" : ""}`} />
+                          Sync Logs
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Filter Tabs */}
+                    <div className="p-4 border-b bg-white flex flex-wrap gap-2">
+                      {[
+                        { id: "all", label: "All Logs" },
+                        { id: "patient", label: "Patient Logins" },
+                        { id: "doctor", label: "Doctor Logins" },
+                        { id: "admin", label: "Admin Logins" },
+                      ].map((type) => (
+                        <button
+                          key={type.id}
+                          onClick={() => setSelectedLogType(type.id as any)}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-xl transition ${
+                            selectedLogType === type.id
+                              ? "bg-[#2E8B57] text-white"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                        >
+                          {type.label}
+                        </button>
+                      ))}
                     </div>
 
                     <div className="overflow-x-auto">
                       <table className="w-full text-left text-xs text-gray-600">
                         <thead className="bg-gray-50 text-gray-500 uppercase text-[10px] font-bold border-b">
                           <tr>
-                            <th className="p-4">Action Event</th>
-                            <th className="p-4">User</th>
-                            <th className="p-4">Module Code</th>
+                            <th className="p-4">Accessor Email / ID</th>
+                            <th className="p-4">System Role</th>
+                            <th className="p-4">Auth Status</th>
+                            <th className="p-4">Platform & Device</th>
                             <th className="p-4">Secure IP</th>
-                            <th className="p-4">Timestamp</th>
+                            <th className="p-4">Audit Timestamp</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {[
-                            { action: "Practitioner Added", user: "Admin (ID: 01)", module: "DOCTOR_REGISTRY", ip: "192.168.1.102", time: "2026-06-30 10:15 AM" },
-                            { action: "EHR File Decrypted", user: "Dr. Sarah Jenkins", module: "PATIENT_PORTAL", ip: "10.0.0.45", time: "2026-06-30 09:30 AM" },
-                            { action: "Global Broadcast Transmitted", user: "Admin (ID: 01)", module: "SMS_NOTIF_CENTER", ip: "192.168.1.102", time: "2026-06-30 08:00 AM" },
-                            { action: "Symptom NLP Job Resolved", user: "AI_SCHEDULER", module: "TRIAGE_SERVICES", ip: "127.0.0.1", time: "2026-06-30 07:55 AM" }
-                          ].map((log, idx) => (
-                            <tr key={idx} className="hover:bg-gray-50">
-                              <td className="p-4 font-bold text-gray-900">{log.action}</td>
-                              <td className="p-4 text-gray-600">{log.user}</td>
-                              <td className="p-4 font-mono text-[10px] text-emerald-800">{log.module}</td>
-                              <td className="p-4 text-gray-400">{log.ip}</td>
-                              <td className="p-4 text-gray-500">{log.time}</td>
-                            </tr>
-                          ))}
+                          {(() => {
+                            let combinedLogs: any[] = [];
+                            if (selectedLogType === "all" || selectedLogType === "patient") {
+                              combinedLogs.push(...patientLoginLogs.map(l => ({ ...l, type: "patient", targetId: l.patientId })));
+                            }
+                            if (selectedLogType === "all" || selectedLogType === "doctor") {
+                              combinedLogs.push(...doctorLoginLogs.map(l => ({ ...l, type: "doctor", targetId: l.doctorId })));
+                            }
+                            if (selectedLogType === "all" || selectedLogType === "admin") {
+                              combinedLogs.push(...adminLoginLogs.map(l => ({ ...l, type: "admin", email: l.adminEmail, targetId: l.sessionId })));
+                            }
+
+                            // Sort combined logs by timestamp desc
+                            combinedLogs.sort((a, b) => new Date(b.loginTimestamp).getTime() - new Date(a.loginTimestamp).getTime());
+
+                            if (combinedLogs.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan={6} className="p-8 text-center text-gray-400">
+                                    <AlertCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                                    No authentication audit logs found in this category.
+                                  </td>
+                                </tr>
+                              );
+                            }
+
+                            return combinedLogs.map((log, idx) => {
+                              const isSuccess = log.status === "success";
+                              return (
+                                <tr key={idx} className="hover:bg-gray-50/50 transition">
+                                  <td className="p-4">
+                                    <div className="font-bold text-gray-900">{log.email || "system-admin"}</div>
+                                    <div className="text-[10px] text-gray-400 font-mono mt-0.5">ID: {log.targetId || "unknown"}</div>
+                                  </td>
+                                  <td className="p-4">
+                                    <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-full ${
+                                      log.type === "admin"
+                                        ? "bg-red-50 text-red-700 border border-red-100"
+                                        : log.type === "doctor"
+                                        ? "bg-blue-50 text-blue-700 border border-blue-100"
+                                        : "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                    }`}>
+                                      {log.type}
+                                    </span>
+                                  </td>
+                                  <td className="p-4">
+                                    <div className="flex items-center gap-1.5">
+                                      <span className={`w-2 h-2 rounded-full ${isSuccess ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
+                                      <span className={`font-black uppercase text-[10px] ${isSuccess ? "text-emerald-700" : "text-red-700"}`}>
+                                        {log.status}
+                                      </span>
+                                    </div>
+                                    {log.failedReason && (
+                                      <div className="text-[10px] text-red-500 mt-1 max-w-[200px] truncate" title={log.failedReason}>
+                                        {log.failedReason}
+                                      </div>
+                                    )}
+                                  </td>
+                                  <td className="p-4">
+                                    <div className="text-gray-800">{log.browser || "Unknown Browser"}</div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5">{log.os || "Unknown OS"} • {log.device || "Desktop"}</div>
+                                  </td>
+                                  <td className="p-4 font-mono text-[11px] text-gray-500">{log.ipAddress || log.ip || "127.0.0.1"}</td>
+                                  <td className="p-4 text-gray-500">
+                                    <div>{log.loginTimestamp ? new Date(log.loginTimestamp).toLocaleDateString() : "N/A"}</div>
+                                    <div className="text-[10px] text-gray-400 mt-0.5">{log.loginTimestamp ? new Date(log.loginTimestamp).toLocaleTimeString() : ""}</div>
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
                         </tbody>
                       </table>
                     </div>

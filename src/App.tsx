@@ -20,6 +20,8 @@ import AuthModal, { AuthScreen, UserRole } from "./components/AuthModal";
 import PatientPortal from "./components/PatientPortal";
 import DoctorPortal from "./components/DoctorPortal";
 import AdminPortal from "./components/AdminPortal";
+import CookieBanner from "./components/CookieBanner";
+import SetupProfileForm from "./components/SetupProfileForm";
 import { TESTIMONIALS } from "./types";
 
 // Image assets generated previously
@@ -36,33 +38,46 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isPortalView, setIsPortalView] = useState(false);
   const [userRole, setUserRole] = useState<UserRole>("patient");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Custom Cursor and Hover States
+  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const [isHovering, setIsHovering] = useState(false);
+  const [isMobile, setIsMobile] = useState(true);
+
+  useEffect(() => {
+    const checkTouch = () => {
+      setIsMobile("ontouchstart" in window || navigator.maxTouchPoints > 0);
+    };
+    checkTouch();
+    window.addEventListener("resize", checkTouch);
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePos({ x: e.clientX, y: e.clientY });
+      
+      const target = e.target as HTMLElement;
+      if (target) {
+        const isInteractive = target.closest("button, a, [role='button'], select, input, textarea, [data-interactive='true']");
+        setIsHovering(!!isInteractive);
+      }
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("resize", checkTouch);
+    };
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("carebridge_userId");
     localStorage.removeItem("carebridge_user");
     setIsLoggedIn(false);
     setIsPortalView(false);
+    setCurrentUser(null);
   };
 
   useEffect(() => {
-    // Check if redirect query has userId from Google OAuth callback!
-    const queryParams = new URLSearchParams(window.location.search);
-    const oauthUserId = queryParams.get("userId");
-    const oauthUserRole = queryParams.get("role") as UserRole | null;
-    const oauthSuccess = queryParams.get("oauthSuccess");
-
-    if (oauthSuccess === "true" && oauthUserId) {
-      localStorage.setItem("carebridge_userId", oauthUserId);
-      if (oauthUserRole) {
-        localStorage.setItem("carebridge_user", JSON.stringify({ _id: oauthUserId, role: oauthUserRole }));
-        setIsLoggedIn(true);
-        setUserRole(oauthUserRole);
-        setIsPortalView(true);
-      }
-      window.history.replaceState({}, document.title, window.location.pathname);
-      return;
-    }
-
     const userId = localStorage.getItem("carebridge_userId");
     const userStr = localStorage.getItem("carebridge_user");
     if (userId && userStr) {
@@ -70,7 +85,20 @@ export default function App() {
         const cachedUser = JSON.parse(userStr);
         setIsLoggedIn(true);
         setUserRole(cachedUser.role || "patient");
+        setCurrentUser(cachedUser);
         setIsPortalView(true);
+
+        // Fetch fresh details from DB to stay updated
+        fetch(`/api/users/me?userId=${userId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && data.user) {
+              setCurrentUser(data.user);
+              localStorage.setItem("carebridge_user", JSON.stringify(data.user));
+              setUserRole(data.user.role || "patient");
+            }
+          })
+          .catch(err => console.error("Error refreshing profile status:", err));
       } catch (err) {
         console.error("Failed to parse cached user.", err);
       }
@@ -82,9 +110,15 @@ export default function App() {
     setUserRole(role);
     setIsPortalView(true);
     if (userRecord) {
+      setCurrentUser(userRecord);
       localStorage.setItem("carebridge_userId", userRecord._id);
       localStorage.setItem("carebridge_user", JSON.stringify(userRecord));
     }
+  };
+
+  const handleProfileSetupComplete = (updatedUser: any) => {
+    setCurrentUser(updatedUser);
+    localStorage.setItem("carebridge_user", JSON.stringify(updatedUser));
   };
 
   const handleScrollToSection = (sectionId: string) => {
@@ -112,6 +146,15 @@ export default function App() {
   };
 
   if (isPortalView) {
+    if (currentUser && currentUser.is_profile_setup === false) {
+      return (
+        <SetupProfileForm 
+          user={currentUser} 
+          onComplete={handleProfileSetupComplete} 
+        />
+      );
+    }
+
     if (userRole === "doctor") {
       return (
         <DoctorPortal 
@@ -134,14 +177,25 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-white relative font-sans text-gray-900" id="carebridge-root">
+    <div className={`min-h-screen bg-white relative font-sans text-gray-900 overflow-x-hidden ${!isMobile ? "cursor-none" : ""}`} id="carebridge-root">
       
-      {/* Background Section Ambient Glows */}
-      <div className="absolute top-[-100px] right-[-100px] w-[500px] h-[500px] bg-[#E9F8F1] rounded-full blur-[120px] opacity-60 z-0 pointer-events-none" />
-      <div className="absolute bottom-[-100px] left-[-100px] w-[500px] h-[500px] bg-[#E9F8F1] rounded-full blur-[120px] opacity-40 z-0 pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-[800px] bg-gradient-to-b from-[#E9F8F1]/40 to-transparent pointer-events-none z-0" />
-      <div className="absolute top-[1600px] left-1/2 -translate-x-1/2 w-[80vw] h-[600px] bg-gradient-to-r from-[#E9F8F1]/20 via-[#5CC49A]/5 to-transparent rounded-full blur-[160px] pointer-events-none z-0" />
-      <div className="absolute bottom-[800px] left-1/2 -translate-x-1/2 w-[90vw] h-[500px] bg-gradient-to-r from-[#E9F8F1]/30 via-transparent to-[#E9F8F1]/20 rounded-full blur-[140px] pointer-events-none z-0" />
+      {/* Background Section Ambient Glows - 8K Quality Multi-Tonal Mesh on White */}
+      <div className="absolute top-0 left-0 right-0 bottom-0 overflow-hidden pointer-events-none z-0">
+        {/* Soft Teal/Mint Blob (Top Left) */}
+        <div className="absolute top-[-5%] left-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#E9F8F1] via-[#D1FAE5] to-[#A7F3D0] opacity-60 blur-[130px] animate-float-slow" />
+        
+        {/* Soft Sky Blue Blob (Top Right) */}
+        <div className="absolute top-[5%] right-[-5%] w-[550px] h-[550px] rounded-full bg-gradient-to-bl from-[#E0F2FE] via-[#BAE6FD] to-[#7DD3FC] opacity-55 blur-[120px] animate-float-slower" />
+        
+        {/* Soft Lavender Blob (Center Left) */}
+        <div className="absolute top-[25%] left-[-15%] w-[650px] h-[650px] rounded-full bg-gradient-to-tr from-[#EEF2FF] via-[#E0E7FF] to-[#C7D2FE] opacity-50 blur-[140px] animate-float-slowest" />
+        
+        {/* Soft Peach/Rose Blob (Center Right) */}
+        <div className="absolute top-[45%] right-[-10%] w-[600px] h-[600px] rounded-full bg-gradient-to-br from-[#FFF1F2] via-[#FFE4E6] to-[#FECDD3] opacity-45 blur-[130px] animate-float-slow" />
+        
+        {/* Soft Mint Blob (Bottom Left) */}
+        <div className="absolute bottom-[10%] left-[-5%] w-[500px] h-[500px] rounded-full bg-gradient-to-tr from-[#E9F8F1] via-[#D1FAE5] to-[#E0F2FE] opacity-40 blur-[120px] animate-float-slower" />
+      </div>
 
       {/* Sticky Header Navigation */}
       <Navbar 
@@ -170,12 +224,22 @@ export default function App() {
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#E9F8F1] border border-[#2E8B57]/10 text-xs font-bold text-[#2E8B57]"
+              whileHover="hover"
+              whileTap={{ scale: 0.98 }}
+              transition={{ duration: 0.3 }}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-badge text-xs font-bold text-[#2E8B57] cursor-pointer transition-all duration-300"
               id="hero-badge"
             >
-              <Sparkles className="w-3.5 h-3.5 animate-pulse text-[#2E8B57]" />
-              ✨ AI Powered Healthcare Platform
+              <motion.div
+                variants={{
+                  hover: { rotate: 180, scale: 1.15 }
+                }}
+                transition={{ duration: 0.5, ease: "easeInOut" }}
+                className="flex items-center justify-center"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-[#2E8B57]" />
+              </motion.div>
+              <span>✨ AI Powered Healthcare Platform</span>
             </motion.div>
 
             {/* Title */}
@@ -209,61 +273,155 @@ export default function App() {
               className="flex flex-col sm:flex-row gap-4 pt-2"
               id="hero-ctas"
             >
-              <button
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2, boxShadow: "0 10px 20px -10px rgba(46, 139, 87, 0.4)" }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleScrollToSection("scheduler-section")}
-                className="bg-[#2E8B57] text-white px-8 py-4 rounded-[24px] text-sm font-bold shadow-xl shadow-emerald-900/20 active:scale-95 transition-all hover:bg-[#2E8B57]/90 hover:-translate-y-0.5"
+                className="bg-[#2E8B57] text-white px-8 py-4 rounded-[24px] text-sm font-bold shadow-xl shadow-emerald-900/10 transition-all hover:bg-[#2E8B57]/90 cursor-pointer text-center"
                 id="hero-primary-cta"
               >
                 Book Appointment
-              </button>
-              <button
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.03, y: -2, boxShadow: "0 10px 20px -10px rgba(0, 0, 0, 0.05)" }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => handleScrollToSection("scheduler-section")}
-                className="border border-[#E5E7EB] bg-white text-[#111827] px-8 py-4 rounded-[24px] text-sm font-bold hover:bg-gray-50 active:scale-95 transition-all hover:-translate-y-0.5"
+                className="border border-[#E5E7EB] bg-white text-[#111827] px-8 py-4 rounded-[24px] text-sm font-bold transition-all hover:bg-gray-50 cursor-pointer text-center"
                 id="hero-secondary-cta"
               >
                 Find Doctors
-              </button>
+              </motion.button>
             </motion.div>
 
-            {/* Trust Indicators */}
+            {/* Trust Indicators: Advanced Liquid Glassy Card with Deep Shadowing & Hover Genuinity Checks */}
             <motion.div
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4, delay: 0.4 }}
-              className="flex flex-wrap items-center gap-6 pt-6 border-t border-[#E5E7EB]/80"
+              className="w-full max-w-xl bg-gradient-to-br from-white/75 via-white/55 to-[#E9F8F1]/15 backdrop-blur-xl border border-white rounded-[32px] p-6 sm:p-7 shadow-[0_20px_50px_rgba(46,139,87,0.06)] hover:shadow-[0_32px_64px_rgba(46,139,87,0.15)] hover:border-[#2E8B57]/25 transition-all duration-500 group relative overflow-hidden"
               id="hero-trust"
             >
-              {/* Avatars Stack */}
-              <div className="flex -space-x-3.5">
-                {[
-                  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=80&h=80",
-                  "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=80&h=80",
-                  "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=80&h=80",
-                  "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=80&h=80"
-                ].map((avatarUrl, idx) => (
-                  <img
-                    key={idx}
-                    className="w-10 h-10 rounded-full border-2 border-white object-cover"
-                    src={avatarUrl}
-                    alt="Patient avatar"
-                    referrerPolicy="no-referrer"
-                  />
-                ))}
+              {/* Liquid Shimmer Reflection Line */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
+              
+              {/* Ambient Glowing Backing */}
+              <div className="absolute -right-20 -bottom-20 w-44 h-44 rounded-full bg-[#2E8B57]/5 blur-2xl group-hover:bg-[#2E8B57]/10 transition-all duration-500 pointer-events-none" />
+
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+                {/* Left Side: Avatar Stack + Quick Verify Tag */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="flex -space-x-3 group-hover:-space-x-1.5 transition-all duration-500 ease-out">
+                      {[
+                        "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=80&h=80",
+                        "https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&q=80&w=80&h=80",
+                        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=80&h=80",
+                        "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=80&h=80"
+                      ].map((avatarUrl, idx) => (
+                        <motion.img
+                          key={idx}
+                          whileHover={{ scale: 1.25, zIndex: 30 }}
+                          className="w-10 h-10 rounded-full border-2 border-white object-cover shadow-sm transition-transform cursor-pointer relative"
+                          src={avatarUrl}
+                          alt="Patient avatar"
+                          referrerPolicy="no-referrer"
+                        />
+                      ))}
+                    </div>
+                    
+                    {/* Pulsing indicator tag */}
+                    <div className="bg-[#E9F8F1] text-[#2E8B57] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-xs border border-[#2E8B57]/10 select-none">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#2E8B57] animate-pulse" />
+                      Live Network
+                    </div>
+                  </div>
+                  
+                  {/* Genuinity Label */}
+                  <div className="flex items-center gap-1.5 text-[11px] text-[#6B7280] font-semibold select-none">
+                    <ShieldCheck className="w-4 h-4 text-[#2E8B57] group-hover:scale-110 transition-transform duration-300" />
+                    <span className="group-hover:text-gray-900 transition-colors duration-300">Platform Genuinity Verified</span>
+                  </div>
+                </div>
+
+                {/* Vertical Divider */}
+                <div className="hidden sm:block h-12 w-px bg-gray-200/80" />
+
+                {/* Right Side: Stats Grid with Verified indicators */}
+                <div className="grid grid-cols-3 gap-4 sm:gap-6 w-full sm:w-auto">
+                  
+                  {/* Stat 1 */}
+                  <motion.div 
+                    whileHover={{ y: -3 }}
+                    className="space-y-1 group/stat cursor-default"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <strong className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 group-hover/stat:text-[#2E8B57] transition-colors duration-300 leading-none">
+                        25k+
+                      </strong>
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0" />
+                    </div>
+                    <span className="text-[11px] text-[#6B7280] font-semibold block leading-tight">
+                      Patients
+                    </span>
+                    <span className="text-[9px] text-[#2E8B57] font-bold block opacity-0 group-hover/stat:opacity-100 transition-opacity duration-300 select-none">
+                      Real Intake
+                    </span>
+                  </motion.div>
+
+                  {/* Stat 2 */}
+                  <motion.div 
+                    whileHover={{ y: -3 }}
+                    className="space-y-1 group/stat border-l border-gray-200 pl-4 cursor-default"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <strong className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 group-hover/stat:text-[#2E8B57] transition-colors duration-300 leading-none">
+                        800+
+                      </strong>
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0" />
+                    </div>
+                    <span className="text-[11px] text-[#6B7280] font-semibold block leading-tight">
+                      Specialists
+                    </span>
+                    <span className="text-[9px] text-[#2E8B57] font-bold block opacity-0 group-hover/stat:opacity-100 transition-opacity duration-300 select-none">
+                      Verified
+                    </span>
+                  </motion.div>
+
+                  {/* Stat 3 */}
+                  <motion.div 
+                    whileHover={{ y: -3 }}
+                    className="space-y-1 group/stat border-l border-gray-200 pl-4 cursor-default"
+                  >
+                    <div className="flex items-center gap-0.5">
+                      <strong className="text-xl sm:text-2xl font-black tracking-tight text-gray-900 group-hover/stat:text-[#2E8B57] transition-colors duration-300 leading-none">
+                        98%
+                      </strong>
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex-shrink-0" />
+                    </div>
+                    <span className="text-[11px] text-[#6B7280] font-semibold block leading-tight">
+                      Satisfaction
+                    </span>
+                    <span className="text-[9px] text-[#2E8B57] font-bold block opacity-0 group-hover/stat:opacity-100 transition-opacity duration-300 select-none">
+                      Audited
+                    </span>
+                  </motion.div>
+
+                </div>
               </div>
 
-              {/* Trust counts */}
-              <div className="grid grid-cols-3 gap-6 sm:gap-8">
-                <div>
-                  <strong className="block text-lg font-black text-gray-900 leading-none">25k+</strong>
-                  <span className="text-xs text-[#6B7280] font-medium mt-1 block">Active Patients</span>
+              {/* Sub-footer showing integrity proof */}
+              <div className="mt-4 pt-3.5 border-t border-gray-200/60 flex flex-wrap items-center justify-between gap-y-2 gap-x-4 text-[10px] text-[#6B7280] font-semibold">
+                <div className="flex items-center gap-1.5">
+                  <Check className="w-3 h-3 text-[#2E8B57]" />
+                  <span>HIPAA-Compliant Storage</span>
                 </div>
-                <div className="border-l border-gray-200 pl-6 sm:pl-8">
-                  <strong className="block text-lg font-black text-gray-900 leading-none">800+</strong>
-                  <span className="text-xs text-[#6B7280] font-medium mt-1 block">Specialists</span>
+                <div className="flex items-center gap-1.5">
+                  <Check className="w-3 h-3 text-[#2E8B57]" />
+                  <span>Licensed Practitioners Only</span>
                 </div>
-                <div className="border-l border-gray-200 pl-6 sm:pl-8">
-                  <strong className="block text-lg font-black text-gray-900 leading-none">98%</strong>
-                  <span className="text-xs text-[#6B7280] font-medium mt-1 block">Satisfaction</span>
+                <div className="flex items-center gap-1.5">
+                  <Check className="w-3 h-3 text-[#2E8B57]" />
+                  <span>Data Encrypted 256-bit</span>
                 </div>
               </div>
             </motion.div>
@@ -447,8 +605,32 @@ export default function App() {
           </div>
         </div>
 
-        <div className="lg:col-span-7">
-          <SymptomAnalyzer onSummarySelect={handleSymptomSummarySelect} />
+        <div className="lg:col-span-7 relative">
+          <div className={!isLoggedIn ? "filter blur-[4px] pointer-events-none select-none opacity-50 transition-all duration-300" : ""}>
+            <SymptomAnalyzer onSummarySelect={handleSymptomSummarySelect} />
+          </div>
+          {!isLoggedIn && (
+            <div className="absolute inset-0 bg-white/30 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center z-10 rounded-3xl">
+              <div className="max-w-md p-6 bg-white border border-[#2E8B57]/15 rounded-3xl shadow-[0_20px_50px_rgba(46,139,87,0.12)] flex flex-col items-center space-y-4">
+                <div className="w-11 h-11 rounded-2xl bg-[#E9F8F1] flex items-center justify-center text-[#2E8B57] shadow-inner">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-gray-900 tracking-tight">Unlock AI Pre-screening</h4>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Log in to your CareBridge profile to run clinical diagnostic symptom scans and receive structured medical logs.
+                </p>
+                <button 
+                  onClick={() => {
+                    setAuthScreen("login");
+                    setIsAuthOpen(true);
+                  }}
+                  className="w-full bg-[#2E8B57] hover:bg-[#2E8B57]/95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  Log In to Unlock Demo
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -467,11 +649,35 @@ export default function App() {
             </p>
           </div>
 
-          <div className="max-w-3xl mx-auto">
-            <AppointmentScheduler 
-              initialSymptomSummary={selectedSymptomSummary} 
-              onBookingSuccess={() => setSelectedSymptomSummary("")}
-            />
+          <div className="max-w-3xl mx-auto relative">
+            <div className={!isLoggedIn ? "filter blur-[4px] pointer-events-none select-none opacity-50 transition-all duration-300" : ""}>
+              <AppointmentScheduler 
+                initialSymptomSummary={selectedSymptomSummary} 
+                onBookingSuccess={() => setSelectedSymptomSummary("")}
+              />
+            </div>
+            {!isLoggedIn && (
+              <div className="absolute inset-0 bg-white/30 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center z-10 rounded-3xl">
+                <div className="max-w-md p-6 bg-white border border-[#2E8B57]/15 rounded-3xl shadow-[0_20px_50px_rgba(46,139,87,0.12)] flex flex-col items-center space-y-4">
+                  <div className="w-11 h-11 rounded-2xl bg-[#E9F8F1] flex items-center justify-center text-[#2E8B57] shadow-inner">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-base font-extrabold text-gray-900 tracking-tight">Unlock Appointment Scheduler</h4>
+                  <p className="text-[11px] text-gray-500 leading-relaxed">
+                    Log in to find verified board doctors, match hospital shift availability, and book secure consultations.
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setAuthScreen("login");
+                      setIsAuthOpen(true);
+                    }}
+                    className="w-full bg-[#2E8B57] hover:bg-[#2E8B57]/95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer"
+                  >
+                    Log In to Book Slot
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -536,7 +742,7 @@ export default function App() {
             {
               id: 6,
               title: "Calendar & Email Sync",
-              description: "Two-way communication hooks instantly writing meetings and intake sheets to Google Calendar.",
+              description: "Two-way communication hooks instantly writing meetings and intake sheets to your local calendar and email inbox.",
               icon: Clock,
               tag: "Workspace Hook",
               color: "text-emerald-600 bg-emerald-50"
@@ -669,7 +875,7 @@ export default function App() {
               {[
                 { title: "Clinical AI Assistance", desc: "Translates diagnostic medical jargon into action items." },
                 { title: "HIPAA Secure Records", desc: "Every transmission of medical records is encrypted." },
-                { title: "Personal Calendar Sync", desc: "Integrates instantly with Google Calendar and Outlook." },
+                { title: "Personal Calendar Sync", desc: "Integrates instantly with your device calendar and Outlook." },
                 { title: "Simplifed Chart Summaries", desc: "Clear directions for recovery, medications, and visits." },
                 { title: "Automated Pill Alarms", desc: "Receive text, mail, or push notifications for prescriptions." }
               ].map((bullet, idx) => (
@@ -772,7 +978,33 @@ export default function App() {
           </p>
         </div>
 
-        <PlatformDashboardPreview />
+        <div className="relative">
+          <div className={!isLoggedIn ? "filter blur-[5px] pointer-events-none select-none opacity-40 transition-all duration-300" : ""}>
+            <PlatformDashboardPreview />
+          </div>
+          {!isLoggedIn && (
+            <div className="absolute inset-0 bg-white/20 backdrop-blur-[6px] flex flex-col items-center justify-center p-6 text-center z-10 rounded-3xl">
+              <div className="max-w-md p-6 bg-white border border-[#2E8B57]/15 rounded-3xl shadow-[0_20px_50px_rgba(46,139,87,0.12)] flex flex-col items-center space-y-4">
+                <div className="w-11 h-11 rounded-2xl bg-[#E9F8F1] flex items-center justify-center text-[#2E8B57] shadow-inner">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <h4 className="text-base font-extrabold text-gray-900 tracking-tight">Unlock Interactive Portal Walkthrough</h4>
+                <p className="text-[11px] text-gray-500 leading-relaxed">
+                  Log in to interact with diagnostic analytics dashboards, practitioner workspaces, and patient care trackers.
+                </p>
+                <button 
+                  onClick={() => {
+                    setAuthScreen("login");
+                    setIsAuthOpen(true);
+                  }}
+                  className="w-full bg-[#2E8B57] hover:bg-[#2E8B57]/95 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all cursor-pointer"
+                >
+                  Log In to Explore Portals
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* STATISTICS MODULE */}
@@ -1030,6 +1262,47 @@ export default function App() {
         initialScreen={authScreen} 
         onLoginSuccess={handleLoginSuccess}
       />
+
+      {/* Cookies acceptance/rejection banner */}
+      <CookieBanner />
+
+      {/* Viewport Aurora Border Frame */}
+      <div className="fixed inset-0 pointer-events-none z-40 border-[3px] md:border-[4px] border-transparent m-1">
+        {/* Elegant glowing frame */}
+        <div className="absolute inset-0 rounded-2xl border border-emerald-500/20 shadow-[inset_0_0_12px_rgba(52,211,153,0.15)]" />
+        {/* Moving glow spots */}
+        <div className="absolute top-[-5px] left-[20%] w-[120px] h-[10px] bg-teal-400 blur-sm rounded-full opacity-70 animate-pulse" />
+        <div className="absolute bottom-[-5px] right-[20%] w-[120px] h-[10px] bg-sky-400 blur-sm rounded-full opacity-70 animate-pulse" />
+        <div className="absolute left-[-5px] top-[40%] w-[10px] h-[120px] bg-emerald-400 blur-sm rounded-full opacity-70 animate-pulse" />
+        <div className="absolute right-[-5px] bottom-[40%] w-[10px] h-[120px] bg-teal-400 blur-sm rounded-full opacity-70 animate-pulse" />
+      </div>
+
+      {/* Custom Cursor */}
+      {!isMobile && (
+        <>
+          {/* Inner dot */}
+          <motion.div
+            className="fixed top-0 left-0 w-2.5 h-2.5 bg-emerald-600 rounded-full pointer-events-none z-[9999]"
+            animate={{
+              x: mousePos.x - 5,
+              y: mousePos.y - 5,
+              scale: isHovering ? 1.5 : 1,
+            }}
+            transition={{ type: "spring", stiffness: 1000, damping: 50, mass: 0.1 }}
+          />
+          {/* Outer circle trail */}
+          <motion.div
+            className="fixed top-0 left-0 w-9 h-9 border border-emerald-500/40 rounded-full pointer-events-none z-[9998]"
+            animate={{
+              x: mousePos.x - 18,
+              y: mousePos.y - 18,
+              scale: isHovering ? 1.8 : 1,
+              backgroundColor: isHovering ? "rgba(16, 185, 129, 0.08)" : "rgba(16, 185, 129, 0)",
+            }}
+            transition={{ type: "spring", stiffness: 250, damping: 25, mass: 0.2 }}
+          />
+        </>
+      )}
 
     </div>
   );

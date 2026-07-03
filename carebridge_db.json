@@ -1,0 +1,189 @@
+{
+  "mockPatients": [],
+  "mockDoctors": [
+    {
+      "_id": "doc-xxpu0g85h",
+      "doctorId": "CB-DOC-000001",
+      "email_verified": true,
+      "status": "active",
+      "availableDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ],
+      "slotDuration": "30 mins",
+      "leaveStatus": false,
+      "registration_date": "2026-07-03T15:40:01.824Z",
+      "last_activity_time": "2026-07-03T15:40:01.825Z",
+      "active_sessions": [],
+      "is_profile_setup": false,
+      "age": 0,
+      "gender": "",
+      "email": "jenkins@carebridge.com",
+      "name": "Dr. Sarah Jenkins",
+      "role": "doctor",
+      "specialty": "Cardiology",
+      "scheduleHours": "09:00 AM - 05:00 PM",
+      "verified": true,
+      "phone": "(555) 123-4567",
+      "bio": "Board-certified Cardiologist with 12+ years of clinical experience specializing in preventive care and lipid management.",
+      "rating": 4.9,
+      "reviewsCount": 142,
+      "hospital": "CareBridge Medical Center",
+      "image": "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300",
+      "availability": [
+        "Monday",
+        "Wednesday",
+        "Friday"
+      ],
+      "password": "$2b$10$GieAE7C0OSGvS4FH85zGwOxdwbt9gnlcr2F1XVXufJwm87ppvl6Mu"
+    },
+    {
+      "_id": "doc-i2nlmjjz0",
+      "doctorId": "CB-DOC-000001",
+      "email_verified": true,
+      "status": "active",
+      "availableDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ],
+      "slotDuration": "30 mins",
+      "leaveStatus": false,
+      "registration_date": "2026-07-03T15:40:02.415Z",
+      "last_activity_time": "2026-07-03T15:40:02.415Z",
+      "active_sessions": [],
+      "is_profile_setup": false,
+      "age": 0,
+      "gender": "",
+      "email": "kim@carebridge.com",
+      "name": "Dr. David Kim",
+      "role": "doctor",
+      "specialty": "Pediatrics",
+      "scheduleHours": "08:00 AM - 04:00 PM",
+      "verified": true,
+      "phone": "(555) 234-5678",
+      "bio": "Dedicated Pediatrician focusing on early childhood development, metabolic health, and family-centered diagnostics.",
+      "rating": 4.8,
+      "reviewsCount": 96,
+      "hospital": "Apex Pediatric Clinic",
+      "image": "https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=300&h=300",
+      "availability": [
+        "Tuesday",
+        "Thursday"
+      ],
+      "password": "$2b$10$GieAE7C0OSGvS4FH85zGwOxdwbt9gnlcr2F1XVXufJwm87ppvl6Mu"
+    },
+    {
+      "_id": "doc-b61xxxrlr",
+      "doctorId": "CB-DOC-000001",
+      "email_verified": true,
+      "status": "active",
+      "availableDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ],
+      "slotDuration": "30 mins",
+      "leaveStatus": false,
+      "registration_date": "2026-07-03T15:40:02.948Z",
+      "last_activity_time": "2026-07-03T15:40:02.948Z",
+      "active_sessions": [],
+      "is_profile_setup": false,
+      "age": 0,
+      "gender": "",
+      "email": "adams@carebridge.com",
+      "name": "Dr. Rachel Adams",
+      "role": "doctor",
+      "specialty": "Neurology",
+      "scheduleHours": "10:00 AM - 06:00 PM",
+      "verified": true,
+      "phone": "(555) 345-6789",
+      "bio": "Senior Neurologist specializing in migraine treatment, vascular cephalea therapy, and electroencephalography.",
+      "rating": 5,
+      "reviewsCount": 184,
+      "hospital": "Summit Neurology Clinic",
+      "image": "https://images.unsplash.com/photo-1594824813573-246434de83fb?auto=format&fit=crop&q=80&w=300&h=300",
+      "availability": [
+        "Monday",
+        "Tuesday",
+        "Thursday"
+      ],
+      "password": "$2b$10$GieAE7C0OSGvS4FH85zGwOxdwbt9gnlcr2F1XVXufJwm87ppvl6Mu"
+    },
+    {
+      "_id": "doc-fzmaqxclo",
+      "doctorId": "CB-DOC-000001",
+      "email_verified": true,
+      "status": "active",
+      "availableDays": [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday"
+      ],
+      "slotDuration": "30 mins",
+      "leaveStatus": false,
+      "registration_date": "2026-07-03T15:40:03.715Z",
+      "last_activity_time": "2026-07-03T15:40:03.715Z",
+      "active_sessions": [],
+      "is_profile_setup": false,
+      "age": 0,
+      "gender": "",
+      "email": "carter@carebridge.com",
+      "name": "Dr. James Carter",
+      "role": "doctor",
+      "specialty": "General Medicine",
+      "scheduleHours": "09:00 AM - 05:00 PM",
+      "verified": true,
+      "phone": "(555) 456-7890",
+      "bio": "Compassionate General Practitioner providing full-spectrum diagnostic care, routine follow-up, and diagnostic assessments.",
+      "rating": 4.7,
+      "reviewsCount": 115,
+      "hospital": "Meridian Health Center",
+      "image": "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=300&h=300",
+      "availability": [
+        "Wednesday",
+        "Friday"
+      ],
+      "password": "$2b$10$GieAE7C0OSGvS4FH85zGwOxdwbt9gnlcr2F1XVXufJwm87ppvl6Mu"
+    }
+  ],
+  "mockPatientLoginLogs": [
+    {
+      "email": "ujjwalkumarkumar61@gmail.com",
+      "patientId": "unknown",
+      "loginTimestamp": "2026-07-03T15:47:53.309Z",
+      "status": "failed",
+      "device": "Desktop",
+      "browser": "Chrome",
+      "os": "Windows",
+      "ipAddress": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "failedReason": "Invalid email or password or non-patient role"
+    }
+  ],
+  "mockDoctorLoginLogs": [],
+  "mockAdminLogs": [],
+  "mockAuditLogs": [
+    {
+      "userId": "unknown",
+      "userEmail": "ujjwalkumarkumar61@gmail.com",
+      "role": "patient",
+      "action": "Failed Login",
+      "timestamp": "2026-07-03T15:47:53.491Z",
+      "ip": "127.0.0.1",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+      "details": "Attempted to access patient login with incorrect email or non-patient role"
+    }
+  ],
+  "mockOTPs": [],
+  "mockAppointments": []
+}

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect, FormEvent } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { 
   X, Mail, Lock, Eye, EyeOff, User, Phone, ShieldCheck, Sparkles, 
@@ -48,6 +48,110 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
   const [errorMsg, setErrorMsg] = useState("");
   const [successToast, setSuccessToast] = useState("");
   const [resendTimer, setResendTimer] = useState(30);
+  const [otpValues, setOtpValues] = useState<string[]>(Array(6).fill(""));
+
+  // Enterprise Security Audit & Hardening State
+  const [failedAttempts, setFailedAttempts] = useState<number>(0);
+  const [lockoutTimer, setLockoutTimer] = useState<number>(0); // countdown in seconds
+  const [otpCooldown, setOtpCooldown] = useState<number>(0);   // countdown in seconds
+  const [showLoginConfirm, setShowLoginConfirm] = useState(false);
+
+  // Lockout countdown timer
+  useEffect(() => {
+    let interval: any;
+    if (lockoutTimer > 0) {
+      interval = setInterval(() => {
+        setLockoutTimer(prev => {
+          if (prev <= 1) {
+            setFailedAttempts(0);
+            if (screen === "locked") {
+              setScreen("login");
+            }
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [lockoutTimer, screen]);
+
+  // OTP request cooldown timer
+  useEffect(() => {
+    let interval: any;
+    if (otpCooldown > 0) {
+      interval = setInterval(() => {
+        setOtpCooldown(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [otpCooldown]);
+
+  const handleOtpInputChange = (idx: number, value: string) => {
+    const cleaned = value.replace(/[^0-9]/g, "");
+    if (!cleaned) {
+      const newOtp = [...otpValues];
+      newOtp[idx] = "";
+      setOtpValues(newOtp);
+      return;
+    }
+
+    const digit = cleaned[cleaned.length - 1] || "";
+    const newOtp = [...otpValues];
+    newOtp[idx] = digit;
+    setOtpValues(newOtp);
+
+    // Auto-focus next input box if available
+    if (idx < 5 && digit) {
+      setTimeout(() => {
+        const nextInput = document.getElementById(`code-input-${idx + 2}`) as HTMLInputElement;
+        if (nextInput) {
+          nextInput.focus();
+        }
+      }, 10);
+    }
+  };
+
+  const handleOtpInputKeyDown = (idx: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace") {
+      if (!otpValues[idx] && idx > 0) {
+        const prevInput = document.getElementById(`code-input-${idx}`) as HTMLInputElement;
+        if (prevInput) {
+          prevInput.focus();
+          const newOtp = [...otpValues];
+          newOtp[idx - 1] = "";
+          setOtpValues(newOtp);
+        }
+      } else {
+        const newOtp = [...otpValues];
+        newOtp[idx] = "";
+        setOtpValues(newOtp);
+      }
+    }
+  };
+
+  const handleOtpInputPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData("text").trim().replace(/[^0-9]/g, "");
+    if (pasteData.length > 0) {
+      const newOtp = [...otpValues];
+      for (let i = 0; i < 6; i++) {
+        if (pasteData[i]) {
+          newOtp[i] = pasteData[i];
+        }
+      }
+      setOtpValues(newOtp);
+      
+      const filledLength = Math.min(pasteData.length, 6);
+      const focusIdx = filledLength === 6 ? 5 : filledLength;
+      setTimeout(() => {
+        const targetInput = document.getElementById(`code-input-${focusIdx + 1}`) as HTMLInputElement;
+        if (targetInput) {
+          targetInput.focus();
+        }
+      }, 10);
+    }
+  };
 
   // Sync prop opens
   useEffect(() => {
@@ -93,37 +197,28 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
     }, 4000);
   };
 
-  // Handlers
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setErrorMsg("");
-    try {
-      const userId = localStorage.getItem("carebridge_userId") || "temp-sso-user";
-      const response = await fetch(`/api/auth/google/url?userId=${userId}`);
-      const data = await response.json();
-      setIsLoading(false);
-
-      if (data.url) {
-        triggerToast("Redirecting to secure Google Consent page...");
-        window.location.href = data.url;
-      } else {
-        setErrorMsg("Failed to initiate Google OAuth SSO gateway.");
-      }
-    } catch (err) {
-      setIsLoading(false);
-      setErrorMsg("Server error initiating Google OAuth SSO.");
-    }
-  };
-
   const handleLoginSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
     
+    if (lockoutTimer > 0) {
+      const mins = Math.floor(lockoutTimer / 60);
+      const secs = lockoutTimer % 60;
+      setErrorMsg(`Too many failed login attempts. Access is locked. Please try again in ${mins}m ${secs}s.`);
+      setScreen("locked");
+      return;
+    }
+
     if (!email || !password) {
       setErrorMsg("Please complete all email and password parameters.");
       return;
     }
 
+    setShowLoginConfirm(true);
+  };
+
+  const executeLoginSubmit = async () => {
+    setShowLoginConfirm(false);
     setIsLoading(true);
     try {
       const response = await fetch("/api/auth/login", {
@@ -135,14 +230,36 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
       setIsLoading(false);
 
       if (!response.ok) {
+        if (data.error === "locked" || response.status === 403 && data.message?.includes("failed login attempts")) {
+          setLockoutTimer(900); // 15 minutes
+          setFailedAttempts(5);
+          setScreen("locked");
+          setErrorMsg("Maximum login attempts exceeded. Account locked for 15 minutes.");
+          return;
+        }
+
         if (data.error === "email_unverified" || data.error === "email_unverified_resend") {
           triggerToast("Email verification is required. Verifying OTP...");
           setScreen("verification");
         } else {
-          setErrorMsg(data.error || "Login verification failed.");
+          setFailedAttempts(prev => {
+            const next = prev + 1;
+            if (next >= 5) {
+              setLockoutTimer(900); // 15 minutes
+              setScreen("locked");
+              setErrorMsg("Maximum login attempts exceeded. Account locked for 15 minutes.");
+            } else {
+              setErrorMsg(`${data.error || "Login verification failed."} (${5 - next} attempts remaining before secure lockout)`);
+            }
+            return next;
+          });
         }
         return;
       }
+
+      // Successful login resets trackers
+      setFailedAttempts(0);
+      setLockoutTimer(0);
 
       localStorage.setItem("carebridge_userId", data.user._id);
       localStorage.setItem("carebridge_user", JSON.stringify(data.user));
@@ -154,13 +271,28 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
       }, 1000);
     } catch (err) {
       setIsLoading(false);
-      setErrorMsg("Server error. Please ensure full-stack dev server is active.");
+      setFailedAttempts(prev => {
+        const next = prev + 1;
+        if (next >= 5) {
+          setLockoutTimer(900); // 15 minutes
+          setScreen("locked");
+          setErrorMsg("Maximum login attempts exceeded. Account locked for 15 minutes.");
+        } else {
+          setErrorMsg(`Server error during login authentication. (${5 - next} attempts remaining)`);
+        }
+        return next;
+      });
     }
   };
 
   const handleSignUpSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+
+    if (otpCooldown > 0) {
+      setErrorMsg(`OTP request cooldown is active. Please wait ${otpCooldown} seconds before requesting a new token.`);
+      return;
+    }
 
     if (!name || !email || !password) {
       setErrorMsg("All core credentials are required.");
@@ -192,8 +324,17 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
         return;
       }
 
-      triggerToast(`Account created successfully for ${name}! Please verify your email.`);
-      setScreen("verification");
+      if (role === "doctor") {
+        triggerToast(`Doctor account created successfully for ${name}! Please login with your credentials.`);
+        setScreen("login");
+      } else {
+        // Start OTP request cooldown
+        setOtpCooldown(60);
+        setResendTimer(60);
+
+        triggerToast(`Account created successfully for ${name}! Please verify your email.`);
+        setScreen("verification");
+      }
     } catch (err) {
       setIsLoading(false);
       setErrorMsg("Server error during registration.");
@@ -203,6 +344,12 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
   const handleForgotPassword = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
+
+    if (otpCooldown > 0) {
+      setErrorMsg(`OTP request cooldown is active. Please wait ${otpCooldown} seconds before requesting a new token.`);
+      return;
+    }
+
     if (!email) {
       setErrorMsg("Enter a valid account email address.");
       return;
@@ -222,6 +369,10 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
         setErrorMsg(data.error || "Failed to trigger recovery sequence.");
         return;
       }
+
+      // Start OTP request cooldown
+      setOtpCooldown(60);
+      setResendTimer(60);
 
       triggerToast("A secure password reset verification code has been dispatched!");
       setScreen("verification");
@@ -275,11 +426,46 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
     }
   };
 
-  const handleVerifyOTP = async () => {
-    const otpCode = [1, 2, 3, 4, 5, 6].map(idx => {
-      const el = document.getElementById(`code-input-${idx}`) as HTMLInputElement;
-      return el ? el.value : "";
-    }).join("");
+  const handleResendOTP = async () => {
+    setErrorMsg("");
+    if (otpCooldown > 0) {
+      setErrorMsg(`OTP request cooldown is active. Please wait ${otpCooldown} seconds.`);
+      return;
+    }
+    if (!email) {
+      setErrorMsg("Please fill in the email parameter to resend verification OTP.");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const isForgotPasswordFlow = screen === "forgot" || screen === "verification" && localStorage.getItem("carebridge_reset_otp") !== null;
+      const otpType = isForgotPasswordFlow ? "forgot" : "register";
+
+      const response = await fetch("/api/auth/resend-otp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, type: otpType }),
+      });
+      const data = await response.json();
+      setIsLoading(false);
+
+      if (!response.ok) {
+        setErrorMsg(data.error || "Failed to resend secure verification token.");
+        return;
+      }
+
+      setOtpCooldown(60);
+      setResendTimer(60);
+      triggerToast("Verification code resent successfully!");
+    } catch (err) {
+      setIsLoading(false);
+      setErrorMsg("Server error resending verification token.");
+    }
+  };
+
+  const handleVerifyOTP = async (codeOverride?: string) => {
+    const otpCode = codeOverride || otpValues.join("");
 
     if (otpCode.length < 6) {
       setErrorMsg("Please insert the full 6-digit security verification token.");
@@ -301,7 +487,11 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
       setIsLoading(false);
 
       if (!response.ok) {
-        setErrorMsg(data.error || "Security token verification failed.");
+        setErrorMsg(data.message || data.error || "Security token verification failed.");
+        // If locked, clear OTP inputs so they don't auto-retry
+        if (data.error === "locked") {
+          setOtpValues(Array(6).fill(""));
+        }
         return;
       }
 
@@ -312,19 +502,24 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
         return;
       }
 
-      localStorage.setItem("carebridge_userId", data.user._id);
-      localStorage.setItem("carebridge_user", JSON.stringify(data.user));
-
-      triggerToast("Verification success! Redirecting to secure home dashboard...");
+      triggerToast("Verification success! Your account is activated. Please log in with your credentials.");
+      setOtpValues(Array(6).fill(""));
       setTimeout(() => {
-        onClose();
-        onLoginSuccess?.(data.user.role, data.user);
+        setScreen("login");
       }, 1500);
     } catch (err) {
       setIsLoading(false);
       setErrorMsg("Server error during security verification.");
     }
   };
+
+  // Auto-submit OTP once 6 digits are fully typed
+  useEffect(() => {
+    const filledCode = otpValues.join("");
+    if (filledCode.length === 6 && screen === "verification" && !isLoading) {
+      handleVerifyOTP(filledCode);
+    }
+  }, [otpValues, screen]);
 
   if (!isOpen) return null;
 
@@ -600,30 +795,6 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
                     </button>
                   </form>
 
-                  {/* Google OAuth Provider */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex-grow h-px bg-gray-100" />
-                      <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Or Continue With</span>
-                      <div className="flex-grow h-px bg-gray-100" />
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                      className="w-full py-2.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all"
-                      id="login-google-btn"
-                    >
-                      <svg className="w-4 h-4" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                      </svg>
-                      Continue with Google Workspace
-                    </button>
-                  </div>
-
                   <div className="pt-2 text-center">
                     <p className="text-xs text-gray-500">
                       Don't have an account?{" "}
@@ -870,34 +1041,38 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
                       <input
                         key={idx}
                         type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         maxLength={1}
-                        defaultValue={idx === 1 ? "4" : idx === 2 ? "2" : idx === 3 ? "0" : ""}
-                        className="w-10 h-12 text-center text-lg font-black border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E8B57] bg-white text-[#111827]"
+                        value={otpValues[idx - 1] || ""}
+                        onChange={(e) => handleOtpInputChange(idx - 1, e.target.value)}
+                        onKeyDown={(e) => handleOtpInputKeyDown(idx - 1, e)}
+                        onPaste={handleOtpInputPaste}
+                        className="w-11 h-14 text-center text-xl font-bold border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2E8B57] focus:border-[#2E8B57] bg-white text-[#111827] shadow-sm transition-all focus:scale-105 duration-200"
                         id={`code-input-${idx}`}
                       />
                     ))}
                   </div>
 
                   <button
-                    onClick={handleVerifyOTP}
-                    className="w-full max-w-xs mx-auto py-3 bg-[#2E8B57] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 shadow-md shadow-[#2E8B57]/15"
+                    onClick={() => handleVerifyOTP()}
+                    disabled={isLoading}
+                    className="w-full max-w-xs mx-auto py-3 bg-[#2E8B57] text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all hover:-translate-y-0.5 shadow-md shadow-[#2E8B57]/15 disabled:opacity-50"
                     id="verification-submit-btn"
                   >
-                    Confirm Security Verification <ArrowRight className="w-4 h-4" />
+                    {isLoading ? "Verifying Token..." : "Confirm Security Verification"} <ArrowRight className="w-4 h-4" />
                   </button>
 
                   <div className="space-y-4 pt-4 border-t border-gray-100">
                     <p className="text-xs text-gray-500">
                       Didn't receive verification email?{" "}
-                      {resendTimer > 0 ? (
-                        <span className="text-gray-400 font-semibold font-mono">Resend available in {resendTimer}s</span>
+                      {otpCooldown > 0 || resendTimer > 0 ? (
+                        <span className="text-gray-400 font-semibold font-mono">Resend available in {Math.max(otpCooldown, resendTimer)}s</span>
                       ) : (
                         <button 
-                          onClick={() => {
-                            setResendTimer(30);
-                            triggerToast("Verification code resent successfully!");
-                          }}
+                          onClick={handleResendOTP}
                           className="text-[#2E8B57] font-bold hover:underline"
+                          disabled={isLoading}
                         >
                           Resend Code
                         </button>
@@ -1047,6 +1222,11 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
                     <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
                       Your CareBridge credentials have been locked temporarily following repeated failed login verification queries.
                     </p>
+                    {lockoutTimer > 0 && (
+                      <div className="inline-block px-4 py-2 bg-red-100 text-red-700 font-mono text-sm font-bold rounded-xl shadow-inner border border-red-200">
+                        Unlocked in: {Math.floor(lockoutTimer / 60)}m {lockoutTimer % 60}s
+                      </div>
+                    )}
                   </div>
 
                   <div className="p-3 bg-red-50 text-red-800 text-[11px] rounded-xl leading-relaxed border border-red-100 max-w-md mx-auto">
@@ -1085,6 +1265,56 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
         </div>
 
       </div>
+
+      {/* ----------------- LOGIN CONFIRMATION MODAL OVERLAY ----------------- */}
+      <AnimatePresence>
+        {showLoginConfirm && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLoginConfirm(false)}
+              className="absolute inset-0 bg-black/45 z-[250] flex items-center justify-center p-4 rounded-[40px] backdrop-blur-sm animate-fade-in"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="absolute inset-0 m-auto max-w-sm h-fit bg-white border border-gray-100 rounded-3xl p-6 z-[251] text-left font-sans text-gray-900 shadow-2xl"
+              id="login-confirmation-modal"
+            >
+              <div className="space-y-4">
+                <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center border border-emerald-100 animate-bounce">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-base font-black text-gray-950">Confirm Clinical Access</h3>
+                  <p className="text-xs text-gray-500 leading-relaxed font-medium">
+                    You are signing into the verified secure healthcare portal of CareBridge as a <strong className="capitalize">{role}</strong>. Please confirm you are the authorized owner of this clinical profile.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2.5 pt-2">
+                  <button
+                    onClick={() => setShowLoginConfirm(false)}
+                    className="flex-1 py-2.5 px-4 bg-gray-50 hover:bg-gray-100 text-gray-600 text-xs font-bold rounded-xl border border-gray-100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={executeLoginSubmit}
+                    className="flex-1 py-2.5 px-4 bg-[#2E8B57] hover:bg-[#2E8B57]/90 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/10 transition-all active:scale-95"
+                    id="confirm-login-btn"
+                  >
+                    Confirm & Sign In
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

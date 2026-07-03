@@ -96,50 +96,83 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
   // Unique generated details on success
   const [successAppointmentId, setSuccessAppointmentId] = useState("");
 
-  // Google Calendar Integration states
+  // Device Calendar Integration states
   // "connect" | "permissions" | "connected" | "failed"
   const [calendarOAuthState, setCalendarOAuthState] = useState<"connect" | "permissions" | "connected" | "failed">("connected");
   const [manualSyncLoading, setManualSyncLoading] = useState(false);
   
-  // Active appointments list for ledger management
-  const [appointments, setAppointments] = useState<CustomAppointment[]>([
-    {
-      id: "CB-88392",
-      doctor: DOCTORS[0], // Dr. Sarah Jenkins
-      date: "2026-07-02",
-      time: "02:30 PM",
-      status: "confirmed",
-      complaint: "Routine chronic cardiovascular check-up and follow-up dosage adjustments.",
-      painScale: 2,
-      syncStatus: "Synced",
-      leaveAlert: false,
-      waitingList: false
-    },
-    {
-      id: "CB-12491",
-      doctor: DOCTORS[2], // Dr. Elena Rostova
-      date: "2026-07-08",
-      time: "10:30 AM",
-      status: "booked",
-      complaint: "Migraine symptoms and sleep analysis follow-up.",
-      painScale: 6,
-      syncStatus: "Synced",
-      leaveAlert: false,
-      waitingList: false
-    },
-    {
-      id: "CB-09328",
-      doctor: DOCTORS[3], // Dr. David Kim
-      date: "2026-06-15",
-      time: "11:00 AM",
-      status: "completed",
-      complaint: "Mild persistent seasonal allergies, nasal congestion & fatigue.",
-      painScale: 4,
-      syncStatus: "Synced",
-      leaveAlert: false,
-      waitingList: false
-    }
-  ]);
+  // Active appointments list for ledger management - cleared of dummy/mock data
+  const [appointments, setAppointments] = useState<CustomAppointment[]>([]);
+  const [doctorsList, setDoctorsList] = useState<Doctor[]>([]);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const res = await fetch("/api/doctors");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.doctors)) {
+            const mapped = data.doctors.map((d: any) => ({
+              id: d._id || d.id,
+              name: d.name || d.email,
+              specialty: d.specialty || "General Practitioner",
+              rating: d.rating || 5.0,
+              reviewsCount: d.reviewsCount || 0,
+              image: d.image || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300",
+              availability: d.availability || ["Monday", "Wednesday", "Friday"],
+              bio: d.bio || "Registered medical specialist.",
+              hospital: d.hospital || "CareBridge Medical Center"
+            }));
+            setDoctorsList(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch doctors", err);
+      }
+    };
+    fetchDoctors();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserAppointments = async () => {
+      const userId = localStorage.getItem("carebridge_userId");
+      if (!userId) return;
+      try {
+        const response = await fetch(`/api/appointments?userId=${userId}`);
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data.appointments)) {
+            const mapped = data.appointments.map((appt: any) => ({
+              id: appt._id,
+              doctor: {
+                id: appt.doctorId || "doc-1",
+                name: appt.doctorName || "General Practitioner",
+                specialty: appt.specialty || "General Medicine",
+                hospital: appt.hospital || "CareBridge Center",
+                rating: 5.0,
+                reviewsCount: 0,
+                image: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200",
+                availability: ["Monday", "Wednesday", "Friday"],
+                bio: "Registered specialist."
+              },
+              date: appt.date,
+              time: appt.time,
+              status: appt.status || "confirmed",
+              complaint: appt.complaint,
+              painScale: appt.painScale || 5,
+              syncStatus: "Synced",
+              leaveAlert: false,
+              waitingList: false
+            }));
+            setAppointments(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch user appointments.", err);
+      }
+    };
+    fetchUserAppointments();
+  }, []);
 
   // Reschedule state
   const [reschedulingAppt, setReschedulingAppt] = useState<CustomAppointment | null>(null);
@@ -174,7 +207,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
       return;
     }
     const suggestions: string[] = [];
-    DOCTORS.forEach(doc => {
+    doctorsList.forEach(doc => {
       if (doc.name.toLowerCase().includes(val.toLowerCase())) {
         suggestions.push(doc.name);
       }
@@ -245,7 +278,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
   const julyDays = generateJulyDays();
 
   // Filter clinician registry
-  const filteredDoctors = DOCTORS.filter(doc => {
+  const filteredDoctors = doctorsList.filter(doc => {
     const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           doc.specialty.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           doc.bio.toLowerCase().includes(searchQuery.toLowerCase());
@@ -403,7 +436,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
         status: "confirmed",
         complaint: chiefComplaint || "General check-up and physical review.",
         painScale: painScale,
-        syncStatus: data.googleSynced ? "Synced" : "Pending",
+        syncStatus: "Synced",
         leaveAlert: false,
         waitingList: false,
       };
@@ -411,11 +444,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
       setAppointments([newAppt, ...appointments]);
       setBookingStep(5);
 
-      if (data.googleSynced) {
-        triggerToast("Your care is booked! Synced directly to Google Calendar.");
-      } else {
-        triggerToast("Your care is booked! Sync pending Google Workspace link.");
-      }
+      triggerToast("Your care is booked! Synced directly to your CareBridge Inbuilt Calendar.");
 
       if (onBookingSuccess) {
         onBookingSuccess();
@@ -474,7 +503,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
       }));
       setIsCancellingRemoving(false);
       setCancellingAppt(null);
-      triggerToast("Appointment cancelled. Google Calendar slot released.");
+      triggerToast("Appointment cancelled. CareBridge Inbuilt Calendar slot released.");
     }, 1500);
   };
 
@@ -497,7 +526,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
         }
         return a;
       }));
-      triggerToast(`Dr. ${DOCTORS.find(d => d.id === docId)?.name} is flagged on leave. Alerts sent.`);
+      triggerToast(`Dr. ${doctorsList.find(d => d.id === docId)?.name || "Clinician"} is flagged on leave. Alerts sent.`);
     }
   };
 
@@ -506,7 +535,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
     setTimeout(() => {
       setManualSyncLoading(false);
       setAppointments(prev => prev.map(a => ({ ...a, syncStatus: "Synced" })));
-      triggerToast("Re-authenticated Google API. All calendar markers healthy.");
+      triggerToast("Re-synchronized Inbuilt Calendar. All calendar markers healthy.");
     }, 1500);
   };
 
@@ -1505,22 +1534,26 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {DOCTORS.map(doc => {
-                  const isOnLeave = simulatedLeaveDoctorId === doc.id;
-                  return (
-                    <button
-                      key={doc.id}
-                      onClick={() => simulateDoctorLeaveToggle(doc.id)}
-                      className={`px-3 py-1.5 text-[9px] font-extrabold rounded-lg uppercase tracking-wide border transition-all ${
-                        isOnLeave 
-                          ? "bg-red-500 border-red-500 text-white" 
-                          : "bg-white border-amber-300 text-amber-800 hover:bg-amber-100/30"
-                      }`}
-                    >
-                      Leave: {doc.name.split(" ").pop()}
-                    </button>
-                  );
-                })}
+                {doctorsList.length === 0 ? (
+                  <span className="text-[10px] text-amber-800 font-bold italic">No doctors registered yet</span>
+                ) : (
+                  doctorsList.map(doc => {
+                    const isOnLeave = simulatedLeaveDoctorId === doc.id;
+                    return (
+                      <button
+                        key={doc.id}
+                        onClick={() => simulateDoctorLeaveToggle(doc.id)}
+                        className={`px-3 py-1.5 text-[9px] font-extrabold rounded-lg uppercase tracking-wide border transition-all ${
+                          isOnLeave 
+                            ? "bg-red-500 border-red-500 text-white" 
+                            : "bg-white border-amber-300 text-amber-800 hover:bg-amber-100/30"
+                        }`}
+                      >
+                        Leave: {doc.name.split(" ").pop()}
+                      </button>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -1609,7 +1642,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
                         
                         <div className="flex items-center gap-1.5 text-[9px] text-emerald-700 font-bold mt-1.5 bg-emerald-50/30 p-1 rounded">
                           <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span>Google Sync: {appt.syncStatus}</span>
+                          <span>Calendar: Inbuilt</span>
                         </div>
                       </div>
 
@@ -1832,7 +1865,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
                 <div className="p-3 bg-emerald-50/40 border border-emerald-100 rounded-xl space-y-1 text-[11px] leading-normal">
                   <span className="font-extrabold text-[#2E8B57] block">Schedule adjustment outcome:</span>
                   <p className="text-emerald-950">Shift from {reschedulingAppt.date} to {rescheduleDate}.</p>
-                  <p className="text-[#2E8B57]">Automatically updates Google Calendar markers.</p>
+                  <p className="text-[#2E8B57]">Automatically updates your Inbuilt Calendar schedules.</p>
                 </div>
               </div>
 

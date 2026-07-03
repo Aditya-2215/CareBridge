@@ -12,7 +12,7 @@ import {
   ExternalLink, RefreshCw, Sliders, Eye, Undo, Smartphone, Send, Share2,
   UserPlus, MapPin, Activity, FileText, CalendarRange, Lock, Plus, ArrowRight
 } from "lucide-react";
-import { Doctor, DOCTORS } from "../types";
+import { Doctor } from "../types";
 
 // Types for local state
 interface MedicationItem {
@@ -87,9 +87,38 @@ export default function CommunicationRemindersHub() {
   };
 
   // 2. DOCTOR LEAVE BANNER AND RE-SCHEDULING EXPERIENCE STATE
+  const [doctorsList, setDoctorsList] = useState<Doctor[]>([]);
   const [isDoctorOnLeave, setIsDoctorOnLeave] = useState(true);
   const [selectedAlternativeDoc, setSelectedAlternativeDoc] = useState<Doctor | null>(null);
   const [showAltDocDialog, setShowAltDocDialog] = useState(false);
+
+  useEffect(() => {
+    const fetchDoctors = async () => {
+      try {
+        const res = await fetch("/api/doctors");
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.doctors)) {
+            const mapped = data.doctors.map((d: any) => ({
+              id: d._id || d.id,
+              name: d.name || d.email,
+              specialty: d.specialty || "General Medicine Specialist",
+              rating: d.rating || 5.0,
+              reviewsCount: d.reviewsCount || 0,
+              image: d.image || "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300&h=300",
+              availability: d.availability || ["Monday", "Wednesday", "Friday"],
+              bio: d.bio || "Registered medical specialist.",
+              hospital: d.hospital || "CareBridge Medical Center"
+            }));
+            setDoctorsList(mapped);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load doctors list", err);
+      }
+    };
+    fetchDoctors();
+  }, []);
 
   // 3. MEDICATION STATE
   const [medications, setMedications] = useState<MedicationItem[]>([
@@ -348,11 +377,11 @@ export default function CommunicationRemindersHub() {
 
   const handleBookFollowUp = (id: string) => {
     triggerCelebration("Follow-up appointment booked successfully!");
-    triggerToast("Appointment scheduled. Google Calendar synchronized automatically.", "success");
+    triggerToast("Appointment scheduled. Inbuilt Calendar synchronized automatically.", "success");
     setFollowUps(prev => prev.filter(fu => fu.id !== id));
   };
 
-  // 6. GOOGLE CALENDAR SYNC STATE
+  // 6. PORTAL INBUILT CALENDAR SYNC STATE
   const [gcalSyncState, setGcalSyncState] = useState<"Connected" | "Pending" | "Failed">("Connected");
   const [lastSyncTime, setLastSyncTime] = useState("Just now");
   const [isSyncing, setIsSyncing] = useState(false);
@@ -371,10 +400,10 @@ export default function CommunicationRemindersHub() {
       if (lucky) {
         setGcalSyncState("Connected");
         setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-        triggerToast("Google Calendar synchronization succeeded.", "success");
+        triggerToast("Inbuilt Calendar synchronization succeeded.", "success");
       } else {
         setGcalSyncState("Failed");
-        triggerToast("Google Calendar sync failed. Host timed out.", "error");
+        triggerToast("Inbuilt Calendar sync failed. Host timed out.", "error");
       }
       setIsSyncing(false);
     }, 1500);
@@ -516,11 +545,11 @@ export default function CommunicationRemindersHub() {
   const [commHistory, setCommHistory] = useState<CommHistoryItem[]>([
     { id: "ch-1", type: "email", title: "Booking Confirmation Email", recipient: "alex.jones@gmail.com", timestamp: "Today, 10:45 AM", status: "delivered" },
     { id: "ch-2", type: "notification", title: "Appt confirmed in-app banner", recipient: "Alex Jones Portal", timestamp: "Today, 10:43 AM", status: "delivered" },
-    { id: "ch-3", type: "calendar", title: "Google Calendar Event Created", recipient: "Alex's Personal Calendar", timestamp: "Today, 10:43 AM", status: "delivered" },
+    { id: "ch-3", type: "calendar", title: "Inbuilt Calendar Event Pin", recipient: "CareBridge Inbuilt Calendar", timestamp: "Today, 10:43 AM", status: "delivered" },
     { id: "ch-4", type: "email", title: "Telehealth Reminder (24h)", recipient: "alex.jones@gmail.com", timestamp: "Yesterday, 11:50 AM", status: "delivered" },
     { id: "ch-5", type: "sms", title: "Intake due reminder text (SMS)", recipient: "+1 (555) 019-2831", timestamp: "Yesterday, 08:30 AM", status: "delivered" },
     { id: "ch-6", type: "email", title: "Daily Medication Reminder", recipient: "alex.jones@gmail.com", timestamp: "Yesterday, 08:30 AM", status: "delivered" },
-    { id: "ch-7", type: "calendar", title: "Google Calendar Sync Session", recipient: "CareBridge Sync Daemon", timestamp: "2 days ago", status: "failed" },
+    { id: "ch-7", type: "calendar", title: "Inbuilt Calendar Ledger Update", recipient: "CareBridge Calendar Daemon", timestamp: "2 days ago", status: "failed" },
     { id: "ch-8", type: "sms", title: "Emergency cancellation text", recipient: "+1 (555) 019-2831", timestamp: "3 days ago", status: "delivered" }
   ]);
 
@@ -575,7 +604,8 @@ export default function CommunicationRemindersHub() {
 
   // Switch to find similar doctor
   const handleAutoAssignDoctor = () => {
-    setSelectedAlternativeDoc(DOCTORS[0]); // Auto-assign Dr. Sarah Jenkins
+    const assigned = doctorsList[0] || null;
+    setSelectedAlternativeDoc(assigned); 
     setShowAltDocDialog(true);
     triggerToast("Alternative general clinicians recommended.", "success");
   };
@@ -732,25 +762,32 @@ export default function CommunicationRemindersHub() {
               </button>
             </div>
 
-            <div className="p-4 border border-emerald-50 bg-emerald-50/20 rounded-2xl flex items-center gap-3">
-              <img 
-                src={DOCTORS[0].image} 
-                alt={DOCTORS[0].name} 
-                className="w-12 h-12 rounded-xl object-cover shrink-0 border-2 border-emerald-500/20"
-                referrerPolicy="no-referrer"
-              />
-              <div className="flex-1 text-xs">
-                <h5 className="font-black text-gray-950">{DOCTORS[0].name}</h5>
-                <p className="text-gray-500 font-sans">{DOCTORS[0].specialty}</p>
-                <p className="text-[10px] text-emerald-700 font-bold mt-1">Available today • Rating: 4.9 ★</p>
+            {selectedAlternativeDoc ? (
+              <div className="p-4 border border-emerald-50 bg-emerald-50/20 rounded-2xl flex items-center gap-3">
+                <img 
+                  src={selectedAlternativeDoc.image} 
+                  alt={selectedAlternativeDoc.name} 
+                  className="w-12 h-12 rounded-xl object-cover shrink-0 border-2 border-emerald-500/20"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="flex-1 text-xs">
+                  <h5 className="font-black text-gray-950">{selectedAlternativeDoc.name}</h5>
+                  <p className="text-gray-500 font-sans">{selectedAlternativeDoc.specialty}</p>
+                  <p className="text-[10px] text-emerald-700 font-bold mt-1">Available today • Rating: {selectedAlternativeDoc.rating} ★</p>
+                </div>
+                <button 
+                  onClick={handleConfirmAltDoctor}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold"
+                >
+                  Select Doc
+                </button>
               </div>
-              <button 
-                onClick={handleConfirmAltDoctor}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold"
-              >
-                Select Doc
-              </button>
-            </div>
+            ) : (
+              <div className="p-4 border border-gray-100 bg-gray-50 rounded-2xl text-center">
+                <p className="text-xs text-gray-500 font-medium">No registered medical specialists found in the directory.</p>
+                <p className="text-[10px] text-gray-400 mt-1">Genuine clinicians can register themselves using the Portal SignUp page.</p>
+              </div>
+            )}
 
             <p className="text-[10px] text-gray-400 leading-normal font-sans">
               *All substitute doctors are board-certified, sync with your CareBridge diagnostic logs automatically, and are fully HIPAA-accredited.
@@ -1381,11 +1418,11 @@ export default function CommunicationRemindersHub() {
                   </div>
                 </div>
 
-                {/* Right: Google Calendar Reminder Integration */}
+                {/* Right: Portal Inbuilt Calendar Integration */}
                 <div className="lg:col-span-4 space-y-6">
                   <div>
-                    <h3 className="text-base font-black text-gray-950">Google Calendar</h3>
-                    <p className="text-xs text-gray-500 font-sans">Manage calendar reminders and real-time appointment syncing.</p>
+                    <h3 className="text-base font-black text-gray-950">Inbuilt Calendar Sync</h3>
+                    <p className="text-xs text-gray-500 font-sans">Manage inbuilt calendar synchronization and real-time appointment syncing.</p>
                   </div>
 
                   <div className="bg-white border border-gray-100 p-6 rounded-3xl shadow-sm space-y-5">
@@ -1401,7 +1438,7 @@ export default function CommunicationRemindersHub() {
                         }`} />
                         <div>
                           <h4 className="text-xs font-black text-gray-950">Synchronization State</h4>
-                          <span className="text-[10px] text-gray-400 font-sans">Google Workspace Integration</span>
+                          <span className="text-[10px] text-gray-400 font-sans">CareBridge Portal Engine</span>
                         </div>
                       </div>
                       
@@ -1429,7 +1466,7 @@ export default function CommunicationRemindersHub() {
                         </div>
                         <div className="flex justify-between text-gray-500">
                           <span>Active Scope:</span>
-                          <strong className="text-[#2E8B57] font-semibold">carebridge.org/calendar</strong>
+                          <strong className="text-[#2E8B57] font-semibold">carebridge.org/inbuilt-calendar</strong>
                         </div>
                       </div>
 
@@ -1439,7 +1476,7 @@ export default function CommunicationRemindersHub() {
                         className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
                       >
                         <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                        <span>{isSyncing ? "Syncing..." : "Re-Sync Google Calendar"}</span>
+                        <span>{isSyncing ? "Syncing..." : "Re-Sync Inbuilt Calendar"}</span>
                       </button>
                     </div>
 

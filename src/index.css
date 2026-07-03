@@ -51,3 +51,81 @@ body {
   animation: marquee 30s linear infinite;
 }
 
+/* 8K Ambient Floating Blob Animations */
+@keyframes float-slow {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  33% {
+    transform: translate(40px, -60px) scale(1.1) rotate(120deg);
+  }
+  66% {
+    transform: translate(-30px, 30px) scale(0.95) rotate(240deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(360deg);
+  }
+}
+
+@keyframes float-slower {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  50% {
+    transform: translate(-50px, 50px) scale(0.9) rotate(-180deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes float-slowest {
+  0% {
+    transform: translate(0px, 0px) scale(1) rotate(0deg);
+  }
+  40% {
+    transform: translate(60px, 40px) scale(1.15) rotate(90deg);
+  }
+  80% {
+    transform: translate(-40px, -30px) scale(0.85) rotate(270deg);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1) rotate(360deg);
+  }
+}
+
+.animate-float-slow {
+  animation: float-slow 22s infinite ease-in-out;
+}
+
+.animate-float-slower {
+  animation: float-slower 28s infinite ease-in-out;
+}
+
+.animate-float-slowest {
+  animation: float-slowest 35s infinite ease-in-out;
+}
+
+/* Glassmorphism Badge styling with gradient border */
+.glass-badge {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.6) 100%) padding-box,
+              linear-gradient(135deg, rgba(46, 139, 87, 0.25) 0%, rgba(92, 196, 154, 0.08) 100%) border-box;
+  border: 1px solid transparent;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 
+    0 1px 2px 0 rgba(0, 0, 0, 0.02),
+    0 4px 12px 0 rgba(46, 139, 87, 0.04),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.5);
+}
+
+.glass-badge:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.7) 100%) padding-box,
+              linear-gradient(135deg, rgba(46, 139, 87, 0.45) 0%, rgba(92, 196, 154, 0.2) 100%) border-box;
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.03),
+    0 6px 16px 0 rgba(46, 139, 87, 0.08),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.6);
+}
+
+
