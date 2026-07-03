@@ -8,7 +8,8 @@ import dns from "dns";
 import dotenv from "dotenv";
 import fs from "fs";
 import admin from "firebase-admin";
-
+import cors from "cors";
+import cookieParser from "cookie-parser";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 
@@ -27,6 +28,17 @@ process.on("unhandledRejection", (reason: any) => {
 dns.setDefaultResultOrder("ipv4first");
 
 const app = express();
+
+app.set("trust proxy", 1);
+
+app.use(cors({
+    origin: [
+        "http://localhost:5173",
+        "https://carebridge-n7xv.onrender.com"
+    ],
+    credentials: true
+}));
+
 app.use(express.json());
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
@@ -1826,7 +1838,12 @@ app.post("/api/auth/login/patient", async (req, res) => {
     await logPatientLogin(trimmedEmail, "success", user.patientId, req);
     await logAudit(user.patientId || user._id, trimmedEmail, "patient", "Login", req, "Successful patient login");
 
-    res.setHeader("Set-Cookie", `cb_session=${sessionId}; Path=/; HttpOnly; SameSite=Strict`);
+    res.cookie("cb_session", sessionId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
     
     const { password: pw, ...safeUser } = user;
     res.json({ success: true, user: { ...safeUser, role: "patient" }, sessionId });
