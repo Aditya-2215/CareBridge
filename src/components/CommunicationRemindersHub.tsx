@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { apiFetch } from "./lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Pill, Bell, BellRing, BellOff, Calendar, CalendarClock, Search, Sparkles,
@@ -95,7 +96,7 @@ export default function CommunicationRemindersHub() {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const res = await apifetch("/api/doctors");
+        const res = await apiFetch("/api/doctors");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.doctors)) {

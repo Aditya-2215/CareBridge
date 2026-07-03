@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { apiFetch } from "./lib/api";
 import { 
   Sparkles, Shield, Heart, Activity, Brain, AlertTriangle, 
   HelpCircle, Clock, Pill, Send, Upload, FileText, Trash2, 

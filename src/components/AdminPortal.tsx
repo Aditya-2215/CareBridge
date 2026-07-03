@@ -14,6 +14,7 @@ import {
   AlertCircle, ChevronDown, CheckCircle
 } from "lucide-react";
 import { Doctor, DOCTORS } from "../types";
+import { apiFetch } from "./lib/api";
 
 interface Patient {
   id: string;
@@ -145,7 +146,7 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
   const fetchLoginLogs = async () => {
     try {
       setIsLogsLoading(true);
-      const response = await apifetch("/api/admin/login-logs");
+      const response = await apiFetch("/api/admin/login-logs");
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -169,7 +170,7 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
   React.useEffect(() => {
     const fetchData = async () => {
       try {
-        const docRes = await apifetch("/api/doctors");
+        const docRes = await apiFetch("/api/doctors");
         if (docRes.ok) {
           const docData = await docRes.json();
           if (Array.isArray(docData.doctors)) {
@@ -188,7 +189,7 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
           }
         }
         
-        const patRes = await apifetch("/api/patients");
+        const patRes = await apiFetch("/api/patients");
         if (patRes.ok) {
           const patData = await patRes.json();
           if (Array.isArray(patData.patients)) {
@@ -207,7 +208,7 @@ export default function AdminPortal({ onClose }: { onClose: () => void }) {
           }
         }
 
-        const apptRes = await apifetch("/api/appointments?role=admin&userId=admin");
+        const apptRes = await apiFetch("/api/appointments?role=admin&userId=admin");
         if (apptRes.ok) {
           const apptData = await apptRes.json();
           if (Array.isArray(apptData.appointments)) {

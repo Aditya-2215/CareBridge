@@ -10,6 +10,7 @@ import {
   ArrowRight, ShieldCheck, Sparkles, CheckCircle2, 
   AlertCircle, Lock
 } from "lucide-react";
+import { apiFetch } from "./lib/api";
 
 interface SetupProfileFormProps {
   user: {
@@ -60,7 +61,7 @@ export default function SetupProfileForm({ user, onComplete }: SetupProfileFormP
     setIsLoading(true);
 
     try {
-      const response = await apifetch("/api/users/update", {
+      const response = await apiFetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

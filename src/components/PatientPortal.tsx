@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, useRef, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { apiFetch } from "./lib/api";
 import { 
   LayoutDashboard, Calendar, Search, Pill, FileText, Bell, 
   User, Settings, HelpCircle, LogOut, ChevronRight, Menu, 
@@ -166,7 +167,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       const userId = localStorage.getItem("carebridge_userId");
       if (!userId) return;
       try {
-        const response = await apifetch(`/api/users/me?userId=${userId}`);
+        const response = await apiFetch(`/api/users/me?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.user) {
@@ -188,7 +189,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       const userId = localStorage.getItem("carebridge_userId");
       if (!userId) return;
       try {
-        const response = await apifetch(`/api/appointments?userId=${userId}`);
+        const response = await apiFetch(`/api/appointments?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data.appointments)) {
@@ -225,7 +226,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
 
     const fetchDoctors = async () => {
       try {
-        const res = await apifetch("/api/doctors");
+        const res = await apiFetch("/api/doctors");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.doctors)) {
@@ -260,7 +261,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      const response = await apifetch("/api/users/update", {
+      const response = await apiFetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -626,7 +627,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
     const user = userStr ? JSON.parse(userStr) : null;
 
     try {
-      const response = await apifetch("/api/appointments/book", {
+      const response = await apiFetch("/api/appointments/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { apiFetch } from "./lib/api";
 import { 
   X, Mail, Lock, Eye, EyeOff, User, Phone, ShieldCheck, Sparkles, 
   ArrowRight, AlertCircle, CheckCircle2, ChevronRight, HelpCircle, 
@@ -221,7 +222,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
     setShowLoginConfirm(false);
     setIsLoading(true);
     try {
-      const response = await apifetch("/api/auth/login", {
+      const response = await apiFetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role }),
@@ -311,7 +312,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
 
     setIsLoading(true);
     try {
-      const response = await apifetch("/api/auth/register", {
+      const response = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, role, name, phone }),
@@ -357,7 +358,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
 
     setIsLoading(true);
     try {
-      const response = await apifetch("/api/auth/forgot-password", {
+      const response = await apiFetch("/api/auth/forgot-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
@@ -404,7 +405,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
 
     setIsLoading(true);
     try {
-      const response = await apifetch("/api/auth/reset-password", {
+      const response = await apiFetch("/api/auth/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: savedOtp, password }),
@@ -442,7 +443,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
       const isForgotPasswordFlow = screen === "forgot" || screen === "verification" && localStorage.getItem("carebridge_reset_otp") !== null;
       const otpType = isForgotPasswordFlow ? "forgot" : "register";
 
-      const response = await apifetch("/api/auth/resend-otp", {
+      const response = await apiFetch("/api/auth/resend-otp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, type: otpType }),
@@ -478,7 +479,7 @@ export default function AuthModal({ isOpen, onClose, initialScreen = "login", on
       const isForgotPasswordFlow = screen === "forgot" || screen === "reset" || localStorage.getItem("carebridge_reset_otp") !== null;
       const otpType = isForgotPasswordFlow ? "forgot" : "register";
       
-      const response = await apifetch("/api/auth/otp-verify", {
+      const response = await apiFetch("/api/auth/otp-verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: otpCode, type: otpType }),
