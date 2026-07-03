@@ -89,7 +89,7 @@ export default function App() {
         setIsPortalView(true);
 
         // Fetch fresh details from DB to stay updated
-        apiFetch(`/api/users/me?userId=${userId}`)
+        fetch(`/api/users/me?userId=${userId}`)
           .then(res => res.json())
           .then(data => {
             if (data.success && data.user) {

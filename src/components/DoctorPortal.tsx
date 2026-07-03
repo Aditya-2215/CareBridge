@@ -150,7 +150,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
       try {
         // Fetch fresh doctor clinical profile from DB
-        const dbRes = await apiFetch(`/api/users/me?userId=${userId}`);
+        const dbRes = await fetch(`/api/users/me?userId=${userId}`);
         if (dbRes.ok) {
           const dbData = await dbRes.json();
           if (dbData.user) {
@@ -173,7 +173,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
 
       try {
         // Fetch real appointments for this doctor
-        const apptRes = await apiFetch(`/api/appointments?userId=${userId}&role=doctor`);
+        const apptRes = await fetch(`/api/appointments?userId=${userId}&role=doctor`);
         if (apptRes.ok) {
           const apptData = await apptRes.json();
           if (Array.isArray(apptData.appointments)) {
@@ -195,7 +195,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
         }
 
         // Fetch registered patients
-        const patRes = await apiFetch("/api/patients");
+        const patRes = await fetch("/api/patients");
         if (patRes.ok) {
           const patData = await patRes.json();
           if (Array.isArray(patData.patients)) {
@@ -292,7 +292,7 @@ export default function DoctorPortal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      const response = await apiFetch("/api/users/update", {
+      const response = await fetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

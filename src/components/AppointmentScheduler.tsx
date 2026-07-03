@@ -109,7 +109,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const res = await apiFetch("/api/doctors");
+        const res = await fetch("/api/doctors");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.doctors)) {
@@ -139,7 +139,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
       const userId = localStorage.getItem("carebridge_userId");
       if (!userId) return;
       try {
-        const response = await apiFetch(`/api/appointments?userId=${userId}`);
+        const response = await fetch(`/api/appointments?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data.appointments)) {
@@ -353,7 +353,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
       const activeUserStr = localStorage.getItem("carebridge_user");
       const activeUser = activeUserStr ? JSON.parse(activeUserStr) : null;
 
-      const response = await apiFetch("/api/ai/advise", {
+      const response = await fetch("/api/ai/advise", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -401,7 +401,7 @@ export default function AppointmentScheduler({ initialSymptomSummary = "", onBoo
     const user = userStr ? JSON.parse(userStr) : null;
 
     try {
-      const response = await apiFetch("/api/appointments/book", {
+      const response = await fetch("/api/appointments/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
