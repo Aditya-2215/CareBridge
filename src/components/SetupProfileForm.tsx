@@ -60,7 +60,7 @@ export default function SetupProfileForm({ user, onComplete }: SetupProfileFormP
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/users/update", {
+      const response = await apifetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

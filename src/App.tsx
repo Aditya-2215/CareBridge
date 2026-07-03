@@ -25,7 +25,7 @@ import SetupProfileForm from "./components/SetupProfileForm";
 import { TESTIMONIALS } from "./types";
 
 // Image assets generated previously
-const HERO_ILLUSTRATION_URL = "/src/assets/images/hero_doctor_patient_1782837949690.jpg";
+const HERO_ILLUSTRATION_URL = "src/assets/images/doctor_patient_consultation_1782837963312.jpg";
 const ECOSYSTEM_ILLUSTRATION_URL = "/src/assets/images/healthcare_ecosystem_1782837963312.jpg";
 
 export default function App() {
@@ -89,7 +89,7 @@ export default function App() {
         setIsPortalView(true);
 
         // Fetch fresh details from DB to stay updated
-        fetch(`/api/users/me?userId=${userId}`)
+        apifetch(`/api/users/me?userId=${userId}`)
           .then(res => res.json())
           .then(data => {
             if (data.success && data.user) {

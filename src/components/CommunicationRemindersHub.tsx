@@ -95,7 +95,7 @@ export default function CommunicationRemindersHub() {
   useEffect(() => {
     const fetchDoctors = async () => {
       try {
-        const res = await fetch("/api/doctors");
+        const res = await apifetch("/api/doctors");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.doctors)) {

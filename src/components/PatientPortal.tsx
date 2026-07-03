@@ -166,7 +166,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       const userId = localStorage.getItem("carebridge_userId");
       if (!userId) return;
       try {
-        const response = await fetch(`/api/users/me?userId=${userId}`);
+        const response = await apifetch(`/api/users/me?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (data.user) {
@@ -188,7 +188,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       const userId = localStorage.getItem("carebridge_userId");
       if (!userId) return;
       try {
-        const response = await fetch(`/api/appointments?userId=${userId}`);
+        const response = await apifetch(`/api/appointments?userId=${userId}`);
         if (response.ok) {
           const data = await response.json();
           if (Array.isArray(data.appointments)) {
@@ -225,7 +225,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
 
     const fetchDoctors = async () => {
       try {
-        const res = await fetch("/api/doctors");
+        const res = await apifetch("/api/doctors");
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data.doctors)) {
@@ -260,7 +260,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
       return;
     }
     try {
-      const response = await fetch("/api/users/update", {
+      const response = await apifetch("/api/users/update", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -626,7 +626,7 @@ export default function PatientPortal({ onClose }: { onClose: () => void }) {
     const user = userStr ? JSON.parse(userStr) : null;
 
     try {
-      const response = await fetch("/api/appointments/book", {
+      const response = await apifetch("/api/appointments/book", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
