@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, useRef, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { apiFetch } from "./lib/api";
 import { 
   LayoutDashboard, Calendar, Search, Pill, FileText, Bell, 
   User, Settings, HelpCircle, LogOut, ChevronRight, Menu, 

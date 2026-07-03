@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect, FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { apiFetch } from "./lib/api";
 import { 
   X, Mail, Lock, Eye, EyeOff, User, Phone, ShieldCheck, Sparkles, 
   ArrowRight, AlertCircle, CheckCircle2, ChevronRight, HelpCircle, 

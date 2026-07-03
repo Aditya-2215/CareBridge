@@ -6,7 +6,7 @@
 import React, { useState, useEffect, FormEvent, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { DOCTORS, Doctor } from "../types";
-import { apiFetch } from "./lib/api";
+
 import { 
   Calendar, Clock, User, Mail, Phone, FileText, CheckCircle2, 
   Search, Star, MapPin, CalendarDays, ArrowLeft, ArrowRight, 

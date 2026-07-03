@@ -4,7 +4,6 @@
  */
 
 import { useState, useEffect } from "react";
-import { apiFetch } from "./lib/api";
 import { motion, AnimatePresence } from "motion/react";
 import {
   Pill, Bell, BellRing, BellOff, Calendar, CalendarClock, Search, Sparkles,
